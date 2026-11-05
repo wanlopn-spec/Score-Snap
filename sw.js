@@ -11,8 +11,8 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (req.mode === 'navigate' || /\/config\.js$/.test(url.pathname)) {
-    if (req.mode !== 'navigate') { e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CORE).then(c => c.put(req, cp)); return r; }).catch(() => caches.match(req))); return; }
-    e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CORE).then(c => c.put('index.html', cp)); return r; }).catch(() => caches.match('index.html')));
+    if (req.mode !== 'navigate') { e.respondWith(fetch(req.url, { cache: 'no-cache' }).then(r => { const cp = r.clone(); caches.open(CORE).then(c => c.put(req, cp)); return r; }).catch(() => caches.match(req))); return; }
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(r => { const cp = r.clone(); caches.open(CORE).then(c => c.put('index.html', cp)); return r; }).catch(() => caches.match('index.html')));
     return;
   }
   e.respondWith(caches.match(req, { ignoreSearch:true }).then(hit => hit || fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(CORE).then(c => c.put(req, cp)); } return r; })));
