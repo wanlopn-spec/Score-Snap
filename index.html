@@ -197,6 +197,15 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .apibox span{font-size:.8rem;color:var(--ink-2)}
 .apibox input[type=password]{width:100%;font-family:var(--mono);background:var(--surface)}
 .apibox .rem{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--ink-2)}
+.startbox{display:grid;gap:10px}
+.start-opt{justify-content:flex-start;text-align:left;gap:12px;padding:12px 14px;min-height:62px;border-radius:var(--r)}
+.start-opt .i{width:22px;height:22px}
+.start-opt span{display:grid;gap:2px}
+.start-opt b{font-weight:600;font-size:.95rem}
+.start-opt small{font-size:.78rem;opacity:.8}
+.startbox a{color:var(--accent);font-weight:600}
+html.ai-off .card.scan>:not(.card-h):not(#startBox){display:none!important}
+html.ai-off #fixBars{display:none}
 .read-row{display:grid;grid-template-columns:1fr auto;gap:8px}
 #readBtn{min-height:50px;font-size:1rem;border-radius:14px}
 #stopRead{min-height:50px;border-radius:14px}
@@ -424,7 +433,25 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
   <div class="desk">
     <!-- Step 1: scan -->
     <section class="card scan" aria-labelledby="scan-h">
-      <div class="card-h"><div class="t"><span class="num">1</span><div><h2 id="scan-h">สแกนโน้ตเพลง</h2><p class="sub">AI อ่านโน้ตจากรูปให้เป็นโน้ตที่แก้ไขได้</p></div></div></div>
+      <div class="card-h"><div class="t"><span class="num">1</span><div><h2 id="scan-h">สแกนโน้ตเพลง</h2><p class="sub" id="scan-sub">AI อ่านโน้ตจากรูปให้เป็นโน้ตที่แก้ไขได้</p></div></div></div>
+
+      <div class="startbox" id="startBox" hidden>
+        <button class="start-opt primary" id="startImport" type="button"><svg class="i"><use href="#i-upload"/></svg><span><b>นำเข้าไฟล์ MusicXML</b><small>จาก MuseScore, Sibelius, StaffPad (.musicxml .xml .mxl)</small></span></button>
+        <button class="start-opt" id="startNew" type="button"><svg class="i"><use href="#i-code"/></svg><span><b>เริ่มเขียนโน้ตใหม่</b><small>หน้าว่าง 4/4 คีย์ C แล้วแก้ทีละตัว</small></span></button>
+        <button class="start-opt" id="startExample" type="button"><svg class="i"><use href="#i-undo"/></svg><span><b>เปิดเพลงตัวอย่าง</b><small>Ode to Joy สำหรับลองเล่น</small></span></button>
+        <div class="status" id="startStatus" aria-live="polite"></div>
+        <details class="adv" id="offlineWrap">
+        <summary>ใช้งานออฟไลน์ <span class="meta" id="offMeta">· กำลังตรวจสอบ…</span></summary>
+        <div class="adv-body">
+          <p class="note">แอปเปิด ฟัง แก้ไข และส่งออกโน้ตได้โดยไม่ต้องต่ออินเทอร์เน็ต (การอ่านรูปด้วย AI ต้องต่ออินเทอร์เน็ต) เสียงเครื่องดนตรีจะเก็บไว้ในเครื่องเมื่อใช้ครั้งแรก หรือดาวน์โหลดทั้งหมดไว้ล่วงหน้าได้</p>
+          <div class="row"><button id="offAll">ดาวน์โหลดเสียงทั้ง 128 ชนิด (56 MB)</button></div>
+          <div class="bar"><i id="offBar"></i></div>
+          <div class="status" id="offStatus"></div>
+        </div>
+      </details>
+      <div class="tips"><b>ใช้งานฟรีทั้งหมด</b>ไม่ต้องลงชื่อเข้าใช้ ไม่ต้องมี key · เขียนโน้ตใน MuseScore (ฟรี) แล้วส่งออกเป็น MusicXML มาเปิดที่นี่ เพื่อฟัง เปลี่ยนเครื่องดนตรี ทรานสโพส ใส่คอร์ด และส่งออก PDF</div>
+        <p class="note">ต้องการให้ AI อ่านโน้ตจากรูปหรือ PDF? เปิด <a href="https://claude.ai/artifact/LQJ4XApoiQDNouHctLfSCF" target="_blank" rel="noopener">Score Snap ใน Claude</a> (ลงชื่อเข้าใช้ Claude ฟรี)</p>
+      </div>
 
       <div class="drop" id="drop">
         <div class="drop-ico"><svg class="i"><use href="#i-scan"/></svg></div>
@@ -490,15 +517,6 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <div class="adv-body"><div class="log" id="log">ยังไม่มี</div></div>
       </details>
 
-      <details class="adv" id="offlineWrap">
-        <summary>ใช้งานออฟไลน์ <span class="meta" id="offMeta">· กำลังตรวจสอบ…</span></summary>
-        <div class="adv-body">
-          <p class="note">แอปเปิด ฟัง แก้ไข และส่งออกโน้ตได้โดยไม่ต้องต่ออินเทอร์เน็ต (การอ่านรูปด้วย AI ต้องต่ออินเทอร์เน็ต) เสียงเครื่องดนตรีจะเก็บไว้ในเครื่องเมื่อใช้ครั้งแรก หรือดาวน์โหลดทั้งหมดไว้ล่วงหน้าได้</p>
-          <div class="row"><button id="offAll">ดาวน์โหลดเสียงทั้ง 128 ชนิด (56 MB)</button></div>
-          <div class="bar"><i id="offBar"></i></div>
-          <div class="status" id="offStatus"></div>
-        </div>
-      </details>
       <div class="tips"><b>อ่านให้แม่น</b>ไฟล์ PDF จากโปรแกรมเขียนโน้ตหรือเครื่องสแกนอ่านได้แม่นที่สุด สำหรับรูปถ่าย: ถ่ายตรงจากด้านบน แสงสว่างทั่วหน้า ไม่มีเงามือ หนึ่งรูปต่อหนึ่งหน้า ถ้ารูปตะแคงกด ⟳ บนรูป</div>
     </section>
 
@@ -2106,7 +2124,7 @@ async function exportFor(app){
     setXStatus((IOS ? 'ส่งออกแล้ว ในแอป Files แตะไฟล์ zip เพื่อแตกไฟล์ แล้ว' : 'ส่งออกแล้ว แตกไฟล์ zip แล้ว') + how[app].replace(/^[^:]+:/,''), 'ok');
   }catch(e){ setXStatus('ส่งออกไม่สำเร็จ ตรวจข้อความ ABC ว่าไม่มีข้อผิดพลาด', 'err'); }
 }
-function setXStatus(m, cls){ const s = $('#xStatus'); s.textContent = m; s.className = 'status' + (cls ? ' ' + cls : ''); }
+function setXStatus(m, cls){ ['#xStatus','#startStatus'].forEach(id => { const s = $(id); if (s){ s.textContent = m; s.className = 'status' + (cls ? ' ' + cls : ''); } }); }
 document.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => exportFor(b.dataset.export)));
 if (IOS) $('#importXml').removeAttribute('accept');
 $('#importXml').addEventListener('change', async e => {
@@ -2221,7 +2239,24 @@ Object.assign(ERR, {
   bad_key:'API key ไม่ถูกต้องหรือไม่มีสิทธิ์ ตรวจสอบที่ console.anthropic.com',
   api_400:'คำขอถูกปฏิเสธ (ตรวจยอดเครดิตในบัญชี Anthropic หรือลองรูปที่เล็กลง)',
 });
+const BLANK = `X:1
+T:เพลงใหม่
+M:4/4
+L:1/4
+Q:1/4=100
+K:C
+C C C C | C C C C | C C C C | C C C C |]`;
+function aiOff(){
+  document.documentElement.classList.add('ai-off');
+  $('#startBox').hidden = false;
+  $('#scan-h').textContent = 'เริ่มต้น';
+  $('#scan-sub').textContent = 'นำเข้าโน้ต หรือเริ่มเขียนใหม่ แล้วฟังและแก้ไขได้ทันที';
+  $('#startImport').onclick = () => $('#importXml').click();
+  $('#startNew').onclick = () => { stopPlay(); tsel.value = '0'; applyAbc(BLANK, 'โน้ตใหม่'); setXStatus('เริ่มโน้ตใหม่แล้ว แตะตัวโน้ตแล้วใช้ ▲▼ เปลี่ยนเสียง หรือแก้ในข้อความ ABC', 'ok'); paper.scrollIntoView({ block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
+  $('#startExample').onclick = () => $('#reset').click();
+}
 function standalone(){
+  if (window.SCORESNAP_AI === false){ aiOff(); return; }
   const server = (window.SCORESNAP_SERVER || '').trim();
   if (server){
     const pb = $('#passBox'); pb.hidden = false;
