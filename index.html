@@ -451,6 +451,12 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <input id="hint" type="text" placeholder="เช่น เปียโน 2 มือ · 3/4 · G major">
       </label>
 
+      <div class="apibox" id="passBox" hidden>
+        <b>อ่านรูปด้วย AI</b>
+        <span>ใส่รหัสห้องเรียนที่ได้จากครูผู้สอน ไม่ต้องลงชื่อเข้าใช้ ไม่ต้องมี API key</span>
+        <input id="passIn" type="password" autocomplete="off" spellcheck="false" placeholder="รหัสห้องเรียน" aria-label="รหัสห้องเรียน">
+        <label class="rem"><input type="checkbox" id="passRemember" checked> จำรหัสไว้ในเบราว์เซอร์นี้</label>
+      </div>
       <div class="apibox" id="apiBox" hidden>
         <b>อ่านรูปด้วย AI โดยไม่ต้องลงชื่อเข้าใช้</b>
         <span>ใส่ Anthropic API key ของคุณเอง (ค่าใช้จ่ายคิดตามการใช้งานจริงในบัญชี Anthropic ของคุณ) สร้าง key ได้ที่ console.anthropic.com · key ส่งตรงไปยัง Anthropic เท่านั้น</span>
@@ -640,6 +646,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
 </div>
 <div class="toast" id="toast" hidden></div>
 
+<script src="config.js"></script>
 <script src="lib/abcjs-basic-min.js"></script>
 <script>
 (() => {
@@ -2156,19 +2163,31 @@ document.addEventListener('keydown', e => {
 /* ---------- standalone mode (no Claude sign-in): optional own Anthropic API key ---------- */
 const API_MODEL = 'claude-opus-5-5';
 function blobToB64(b){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); }); }
-function apiSampler(getKey){
+// mode 'key': straight to Anthropic with the viewer's own key · mode 'server': through the class server, which holds the key
+function apiSampler(getKey, server){
   const fn = async (input, opts = {}) => {
-    const key = getKey(); if (!key) throw { code:'no_key' };
-    const content = [];
-    for (const b of [].concat(opts.images || [])) content.push({ type:'image', source:{ type:'base64', media_type: b.type || 'image/jpeg', data: await blobToB64(b) } });
-    content.push({ type:'text', text: typeof input === 'string' ? input : input.map(m => m.content).join('\n\n') });
+    const key = getKey(); if (!key) throw { code: server ? 'no_pass' : 'no_key' };
+    const images = [];
+    for (const b of [].concat(opts.images || [])) images.push({ media_type: b.type || 'image/jpeg', data: await blobToB64(b) });
+    const prompt = typeof input === 'string' ? input : input.map(m => m.content).join('\n\n');
     let r;
     try{
-      r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', signal: opts.signal,
-        headers:{ 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-        body: JSON.stringify({ model: API_MODEL, max_tokens: 16000, stream: true, messages:[{ role:'user', content }] }) });
-    }catch(e){ throw { code: e && e.name === 'AbortError' ? 'cancelled' : 'upstream_error' }; }
-    if (!r.ok){ let msg = ''; try{ msg = (await r.json()).error.message; }catch(e){}
+      if (server){
+        r = await fetch(server.replace(/\/+$/, '') + '/read', { method:'POST', signal: opts.signal,
+          headers:{ 'content-type':'application/json', 'x-passcode': key },
+          body: JSON.stringify({ prompt, images }) });
+      } else {
+        const content = images.map(i => ({ type:'image', source:{ type:'base64', media_type:i.media_type, data:i.data } }));
+        content.push({ type:'text', text: prompt });
+        r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', signal: opts.signal,
+          headers:{ 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+          body: JSON.stringify({ model: API_MODEL, max_tokens: 16000, stream: true, messages:[{ role:'user', content }] }) });
+      }
+    }catch(e){ throw { code: e && e.name === 'AbortError' ? 'cancelled' : (server ? 'server_down' : 'upstream_error') }; }
+    if (!r.ok){ let msg = '', ecode = ''; try{ const j = await r.json(); msg = j.error.message; ecode = j.error.code || j.error.type || ''; }catch(e){}
+      if (server){
+        throw { code: ecode === 'passcode' ? 'bad_pass' : ecode === 'origin' ? 'origin' : ecode === 'daily_limit' ? 'daily_limit' : ({401:'server_key',403:'server_key',429:'rate_limited',413:'image_rejected',529:'upstream_error'})[r.status] || (r.status===400 ? 'api_400' : 'upstream_error'), message: msg };
+      }
       throw { code: ({401:'bad_key',403:'bad_key',429:'rate_limited',413:'image_rejected',529:'upstream_error'})[r.status] || (r.status===400 ? 'api_400' : 'upstream_error'), message: msg }; }
     const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', text = '', stop = null;
     try{
@@ -2193,10 +2212,32 @@ function apiSampler(getKey){
 }
 Object.assign(ERR, {
   no_key:'ใส่ Anthropic API key ก่อน จึงจะอ่านรูปด้วย AI ได้',
+  no_pass:'ใส่รหัสห้องเรียนก่อน จึงจะอ่านรูปด้วย AI ได้ (ขอรหัสจากครูผู้สอน)',
+  bad_pass:'รหัสห้องเรียนไม่ถูกต้อง ตรวจตัวพิมพ์เล็ก-ใหญ่ หรือขอรหัสใหม่จากครูผู้สอน',
+  origin:'เว็บนี้ยังไม่ได้รับอนุญาตให้ใช้เซิร์ฟเวอร์ AI แจ้งผู้ดูแลระบบ',
+  daily_limit:'วันนี้ใช้ AI อ่านรูปครบโควตาของห้องเรียนแล้ว ลองใหม่พรุ่งนี้',
+  server_key:'เซิร์ฟเวอร์ AI ตั้งค่า key ไม่ถูกต้อง หรือเครดิตหมด แจ้งผู้ดูแลระบบ',
+  server_down:'ติดต่อเซิร์ฟเวอร์ AI ไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่',
   bad_key:'API key ไม่ถูกต้องหรือไม่มีสิทธิ์ ตรวจสอบที่ console.anthropic.com',
   api_400:'คำขอถูกปฏิเสธ (ตรวจยอดเครดิตในบัญชี Anthropic หรือลองรูปที่เล็กลง)',
 });
 function standalone(){
+  const server = (window.SCORESNAP_SERVER || '').trim();
+  if (server){
+    const pb = $('#passBox'); pb.hidden = false;
+    const pin = $('#passIn'), prem = $('#passRemember');
+    const sp = store.get('scoresnap.pass'); if (sp){ pin.value = sp; prem.checked = true; }
+    const ssamp = apiSampler(() => pin.value.trim(), server);
+    const psync = () => {
+      const k = pin.value.trim();
+      sample = k ? ssamp : null; caps = k ? { images:{ maxCount:8 } } : null;
+      if (prem.checked && k) store.set('scoresnap.pass', k); else { try{ localStorage.removeItem('scoresnap.pass'); }catch(e){} }
+      drawThumbs(); runBarCheck();
+      setScan(k ? 'พร้อมอ่านโน้ตด้วย AI · เลือกรูปหรือ PDF โน้ตเพื่อเริ่ม' : 'ฟัง แก้ไข นำเข้า และส่งออกโน้ตได้เลย · ถ้าต้องการให้ AI อ่านรูป ใส่รหัสห้องเรียนด้านบน');
+    };
+    pin.addEventListener('input', psync); prem.addEventListener('change', psync);
+    psync(); return;
+  }
   const box = $('#apiBox'); box.hidden = false;
   const inp = $('#apiKey'), rem = $('#apiRemember');
   const saved = store.get('scoresnap.key'); if (saved){ inp.value = saved; rem.checked = true; }
