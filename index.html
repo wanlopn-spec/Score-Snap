@@ -239,36 +239,81 @@ html.ai-off #fixBars{display:none}
 .tips b{color:var(--ink);font-weight:600}
 
 /* score card */
-.sound{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;padding:12px;border-radius:var(--r);background:var(--surface-2);border:1px solid var(--line)}
+.sound{min-width:0;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;padding:12px;border-radius:var(--r);background:var(--surface-2);border:1px solid var(--line)}
 .sound .lbl{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--ink-2);font-weight:500;width:100%}
 .voices{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 320px;min-width:0}
 .voices label{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2);min-width:0;flex:1 1 200px}
 .voices select{width:100%;background:var(--surface)}
-.mixbox{width:100%;border-top:1px solid var(--line);padding-top:10px}
+.mixbox{width:100%;min-width:0;max-width:100%;border-top:1px solid var(--line);padding-top:10px}
 .mixbox>summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:.9rem}
 .mixbox>summary::-webkit-details-marker{display:none}
 .mixbox>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:rotate(45deg);transition:transform .2s;margin-left:4px}
 .mixbox[open]>summary::after{transform:rotate(-135deg)}
-.mixbox .meta{color:var(--accent);font-weight:600;font-size:.8rem}
-.mix-head{display:none}
-.mixer{display:grid;gap:6px;margin:10px 0}
-.mix-row{display:grid;grid-template-columns:minmax(90px,1.1fr) minmax(90px,2fr) 64px minmax(110px,1.4fr) auto auto;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--line);transition:opacity .15s}
-.mix-row.master{grid-template-columns:minmax(90px,1.1fr) minmax(90px,2fr) 64px;border-style:dashed}
-.mix-row.silent{opacity:.45}
-.mix-name{font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.mix-row input[type=range]{width:100%;min-width:0}
-.mix-val{font:500 .74rem var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
-.mix-panw{display:flex;align-items:center;gap:4px;font:600 .68rem var(--mono);color:var(--ink-2);min-width:0}
-.mix-panv{min-width:30px;text-align:right;font:500 .72rem var(--mono)}
-.mix-btn{min-height:30px;min-width:32px;padding:0;font:700 .78rem var(--mono);border-radius:8px}
-.mix-btn.m[aria-pressed=true]{background:#F59E0B;color:#1C1408;border-color:transparent}
-.mix-btn.s[aria-pressed=true]{background:#22C55E;color:#06210F;border-color:transparent}
-@media (max-width:620px){
-  .mix-row{grid-template-columns:1fr auto auto;grid-template-areas:"name m s" "vol vol val" "pan pan pan"}
-  .mix-row .mix-name{grid-area:name}.mix-row>input[type=range]{grid-area:vol}.mix-row .mix-val{grid-area:val}.mix-row .mix-panw{grid-area:pan}.mix-row .m{grid-area:m}.mix-row .s{grid-area:s}
-  .mix-row.master{grid-template-columns:1fr auto;grid-template-areas:"name name" "vol val"}
-}
-@media (pointer:coarse){.mix-btn{min-height:40px;min-width:42px}}
+.mixbox .meta{color:var(--accent);font-weight:600;font-size:.78rem}
+/* console — a dark hardware panel in both themes */
+.mixer{--cn-bg:#150E26;--cn-strip:#231A3D;--cn-strip2:#1A1330;--cn-line:#372A5C;--cn-ink:#EEE9FF;--cn-ink2:#A397CF;--cn-well:#0B0716;
+  display:flex;gap:8px;margin:10px 0;padding:10px;border-radius:18px;overflow-x:auto;max-width:100%;box-sizing:border-box;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#4b3a7d transparent;
+  background:radial-gradient(120% 90% at 50% -20%,#2C1F52 0%,transparent 60%),linear-gradient(180deg,#1C1333,var(--cn-bg));
+  border:1px solid #2E2350;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 40px -22px rgba(46,16,101,.75);color:var(--cn-ink)}
+.chans{display:flex;gap:8px}
+.strip{flex:0 0 84px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;border-radius:13px;position:relative;
+  background:linear-gradient(180deg,var(--cn-strip),var(--cn-strip2));border:1px solid var(--cn-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:opacity .15s}
+.strip::before{content:"";position:absolute;left:10px;right:10px;top:0;height:3px;border-radius:0 0 3px 3px;background:var(--c,#A78BFA);box-shadow:0 0 10px var(--c,#A78BFA)}
+.strip.silent{opacity:.42}
+.st-name{font:700 .74rem/1.2 var(--sans,inherit);width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-inst{font:500 .6rem/1.2 var(--mono);color:var(--cn-ink2);width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:-5px}
+.st-spacer{flex:1}
+.knobs{display:grid;grid-template-columns:1fr 1fr;gap:4px 2px;width:100%;justify-items:center}
+.knobs .pan{grid-column:1/-1}
+.knobs.two .knob{grid-column:auto}
+.knob{display:grid;justify-items:center;gap:0;--kc:#C4B5FD}
+.knob.rev{--kc:#A78BFA}.knob.dly{--kc:#22D3EE}.knob.pan{--kc:#F9A8D4}
+.kn{width:36px;height:36px;border-radius:50%;cursor:ns-resize;touch-action:none;outline:none;-webkit-tap-highlight-color:transparent}
+.knob.big .kn{width:46px;height:46px}
+.kn:focus-visible{box-shadow:0 0 0 2px var(--kc)}
+.kn svg{width:100%;height:100%;overflow:visible}
+.kt{fill:none;stroke:#3A2D63;stroke-width:3.4;stroke-linecap:round}
+.kv{fill:none;stroke:var(--kc);stroke-width:3.4;stroke-linecap:round;filter:drop-shadow(0 0 2.5px var(--kc))}
+.kf{fill:#2E2352;stroke:#4E3F82;stroke-width:1}
+.kn:hover .kf,.kn.drag .kf{fill:#3A2C66}
+.kp{stroke:#F5F3FF;stroke-width:2.2;stroke-linecap:round}
+.kl{font:700 .56rem/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--cn-ink2)}
+.kvv{font:500 .6rem/1.2 var(--mono);font-variant-numeric:tabular-nums;color:var(--cn-ink)}
+.ms{display:flex;gap:5px}
+.mixer .mix-btn{min-height:26px;min-width:30px;padding:0;font:800 .72rem var(--mono);border-radius:7px;background:#120C22;color:var(--cn-ink2);border:1px solid var(--cn-line);box-shadow:none}
+.mixer .mix-btn:hover{background:#1E1538;color:var(--cn-ink);border-color:#5A4893}
+.mixer .mix-btn.m[aria-pressed=true]{background:#F59E0B;color:#1C1408;border-color:transparent;box-shadow:0 0 12px rgba(245,158,11,.55)}
+.mixer .mix-btn.s[aria-pressed=true]{background:#22C55E;color:#06210F;border-color:transparent;box-shadow:0 0 12px rgba(34,197,94,.55)}
+.fader{--v:.8;position:relative;width:64px;height:168px;touch-action:none;cursor:grab;outline:none;border-radius:8px;-webkit-tap-highlight-color:transparent}
+.fader.drag{cursor:grabbing}
+.fader:focus-visible{box-shadow:0 0 0 2px #C4B5FD}
+.fd-scale{position:absolute;left:0;top:9px;bottom:9px;width:18px}
+.fd-scale span{position:absolute;right:0;bottom:calc(11px + var(--p) * (100% - 22px));transform:translateY(50%);font:500 .5rem/1 var(--mono);color:#7D70AE}
+.fd-scale span.u{color:var(--cn-ink);font-weight:700}
+.fd-scale span::after{content:"";display:inline-block;width:4px;height:1px;margin-left:2px;vertical-align:middle;background:currentColor}
+.fd-groove{position:absolute;left:35px;top:9px;bottom:9px;width:4px;margin-left:-2px;border-radius:3px;background:var(--cn-well);box-shadow:inset 0 1px 2px #000,0 0 0 1px #2A2047}
+.fd-groove::after{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(11px + var(--v) * (100% - 22px));border-radius:3px;background:linear-gradient(to top,#7C3AED,var(--c,#A78BFA));opacity:.85}
+.fd-cap{position:absolute;left:35px;width:30px;height:22px;margin-left:-15px;top:calc(9px + (1 - var(--v)) * (100% - 40px));border-radius:5px;pointer-events:none;
+  background:linear-gradient(180deg,#FAF8FF 0%,#D6CFEE 38%,#8E83B9 50%,#CFC8EA 62%,#F2EFFF 100%);box-shadow:0 4px 8px rgba(0,0,0,.55),inset 0 1px 0 #fff}
+.fd-cap::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px;border-radius:1px;background:var(--c,#7C3AED)}
+.meter{position:absolute;right:2px;top:9px;bottom:9px;width:6px;border-radius:3px;background:var(--cn-well);overflow:hidden;box-shadow:inset 0 0 0 1px #2A2047}
+.meter i{position:absolute;inset:0;background:linear-gradient(to top,#22C55E 0%,#84CC16 55%,#FACC15 78%,#F97316 90%,#EF4444 100%);clip-path:inset(calc(100% - var(--lv,0%)) 0 0 0)}
+.meter.clip{box-shadow:inset 0 0 0 1px #EF4444,0 0 8px rgba(239,68,68,.6)}
+.st-db{font:600 .66rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--cn-ink);background:var(--cn-well);border:1px solid #2A2047;border-radius:6px;padding:4px 0;width:64px;text-align:center}
+.strip.fx{flex-basis:150px;gap:8px}
+.fx-sec{display:grid;gap:7px;justify-items:center;width:100%}
+.fx-h{font:800 .6rem var(--mono);letter-spacing:.16em;color:#C4B5FD}
+.fx-sec+.fx-div+.fx-sec .fx-h{color:#67E8F9}
+.fx-div{width:80%;height:1px;background:var(--cn-line)}
+.seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--cn-well);border:1px solid #2A2047}
+.mixer .seg button{min-height:24px;min-width:0;padding:0 6px;font:700 .58rem var(--mono);border:0;border-radius:6px;background:transparent;color:var(--cn-ink2);box-shadow:none}
+.mixer .seg button:hover{background:#1E1538;color:var(--cn-ink)}
+.mixer .seg button[aria-pressed=true]{background:#7C3AED;color:#fff}
+.fx-sec+.fx-div+.fx-sec .seg button[aria-pressed=true]{background:#0891B2}
+.strip.master{flex-basis:92px;background:linear-gradient(180deg,#3A2470,#22164A);border-color:#6D4BC2;--c:#E9D5FF}
+.strip.master .fader{height:220px}
+.mix-hint{margin:-4px 0 6px;color:var(--accent);font-weight:600}
+@media (pointer:coarse){.mixer .mix-btn{min-height:36px;min-width:36px}.kn{width:40px;height:40px}.mixer .seg button{min-height:30px}}
 .tp{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2)}
 .tp select{background:var(--surface)}
 #sndStatus:not(:empty){width:100%}
@@ -592,9 +637,9 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <div class="status" id="sndStatus" aria-live="polite"></div>
         <details class="mixbox" id="mixBox" open>
           <summary><svg class="i"><use href="#i-sliders"/></svg>Mix <span class="meta" id="mixSum"></span></summary>
-          <div class="mix-head"><span>Volume</span><span>Pan</span><span>M / S</span></div>
           <div class="mixer" id="mixer"></div>
-          <div class="row"><button type="button" id="mixReset" class="ghost">Reset mix</button><span class="note">M = Mute (ปิดเสียง) · S = Solo (ฟังเฉพาะแนวนี้) · ดับเบิลคลิกแถบ Pan เพื่อกลับกลาง</span></div>
+          <p class="note mix-hint" id="mixHint" hidden>↔ ปัดซ้าย-ขวาบนแผง Mix เพื่อดู Effects และ Master</p>
+          <div class="row"><button type="button" id="mixReset" class="ghost">Reset mix</button><span class="note">ลากปุ่มหมุนขึ้น-ลงเพื่อเพิ่ม/ลด · Reverb = เสียงก้อง · Delay = เสียงสะท้อน · M = Mute · S = Solo · ดับเบิลคลิกเพื่อคืนค่าเดิม</span></div>
         </details>
       </div>
 
@@ -904,36 +949,165 @@ function synthNote(dest, midi, t, dur, vel){
   g.gain.exponentialRampToValueAtTime(v*.25,t+Math.max(.26,dur));
   g.gain.exponentialRampToValueAtTime(.0001,t+dur+.35);
 }
-/* ---------- Mix: per-voice volume, pan, mute, solo + master ---------- */
-const mix = { master: 80, tracks: {} };             // tracks[i] = { vol 0–100, pan -100–100, mute, solo }
-let mixNodes = {};                                  // track -> { g, p } while playing
-const mixOf = t => (mix.tracks[t] = mix.tracks[t] || { vol: 80, pan: 0, mute: false, solo: false });
-const volGain = v => Math.pow(v / 80, 2);           // 80 = unity, 100 ≈ +3.9 dB, 0 = silent
+/* ---------- Mix console: per-voice fader, pan, reverb/delay sends, mute, solo + FX returns + master ---------- */
+const MIX_DEF = () => ({ master: 80, tracks: {}, fx: { rev: { size: 'hall', ret: 80 }, dly: { time: '8', fb: 35, ret: 70 } } });
+const mix = MIX_DEF();
+let mixNodes = {}, fxNodes = null, masterMeter = null;  // live audio nodes while playing
+const mixOf = t => (mix.tracks[t] = mix.tracks[t] || { vol: 80, pan: 0, rev: 20, dly: 0, mute: false, solo: false });
+const volGain = v => Math.pow(v / 80, 2);           // 80 = unity (0 dB), 100 ≈ +3.9 dB, 0 = silent
+const sendGain = v => Math.pow(v / 100, 1.6);
+const REV = { room: { dur: 1.1, k: 4.2, pre: .008, label: 'Room' }, hall: { dur: 2.6, k: 3.2, pre: .018, label: 'Hall' }, church: { dur: 4.6, k: 2.6, pre: .03, label: 'Church' } };
+const DLY = { '16': [1/16, '1/16'], '8': [1/8, '1/8'], '8d': [3/16, '1/8.'], '4': [1/4, '1/4'] }, DLY_ORDER = ['16', '8', '8d', '4'];
+const irCache = {};
+function impulse(c, size){
+  const key = c.sampleRate + size; if (irCache[key]) return irCache[key];
+  const s = REV[size], n = Math.round(c.sampleRate * s.dur), pre = Math.round(c.sampleRate * s.pre), b = c.createBuffer(2, n + pre, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){
+    const d = b.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < n; i++){ lp += ((Math.random() * 2 - 1) - lp) * (.55 - .4 * i / n); d[i + pre] = lp * Math.pow(1 - i / n, s.k); }
+  }
+  return (irCache[key] = b);
+}
+const delaySec = () => Math.min(1.9, msPerWhole() / 1000 * DLY[mix.fx.dly.time][0]);
 function trackGain(t){
   const m = mixOf(t), anySolo = Object.values(mix.tracks).some(x => x.solo);
   if (m.mute || (anySolo && !m.solo)) return 0;
   return volGain(m.vol);
 }
+function makeFx(c, dest){
+  const revIn = c.createGain(), conv = c.createConvolver(), revRet = c.createGain();
+  conv.buffer = impulse(c, mix.fx.rev.size); revIn.connect(conv).connect(revRet).connect(dest);
+  const dlyIn = c.createGain(), d = c.createDelay(2), fb = c.createGain(), lp = c.createBiquadFilter(), dlyRet = c.createGain();
+  lp.type = 'lowpass'; lp.frequency.value = 3600;
+  dlyIn.connect(d); d.connect(lp).connect(fb).connect(d); lp.connect(dlyRet).connect(dest);
+  fxNodes = { c, revIn, conv, revRet, dlyIn, d, fb, dlyRet, size: mix.fx.rev.size };
+  applyFx(true);
+}
+function applyFx(now){
+  const f = fxNodes; if (!f) return;
+  const c = f.c, t = c.currentTime, set = (p, v) => now ? (p.value = v) : p.setTargetAtTime(v, t, .04);
+  try{
+    if (f.size !== mix.fx.rev.size){                 // swap in a new room size
+      const nc = c.createConvolver(); nc.buffer = impulse(c, mix.fx.rev.size);
+      f.revIn.disconnect(); f.revIn.connect(nc).connect(f.revRet);
+      const old = f.conv; setTimeout(() => { try{ old.disconnect(); }catch(e){} }, 50);
+      f.conv = nc; f.size = mix.fx.rev.size;
+    }
+    set(f.revRet.gain, volGain(mix.fx.rev.ret));
+    set(f.dlyRet.gain, volGain(mix.fx.dly.ret));
+    set(f.fb.gain, mix.fx.dly.fb / 100 * .85);
+    set(f.d.delayTime, delaySec());
+  }catch(e){}
+}
 function applyMix(){
   if (master && ctx) try{ master.gain.setTargetAtTime(volGain(mix.master), ctx.currentTime, .03); }catch(e){}
   for (const [t, n] of Object.entries(mixNodes)){
-    try{ n.g.gain.setTargetAtTime(trackGain(+t), ctx.currentTime, .03); if (n.p) n.p.pan.setTargetAtTime(mixOf(+t).pan / 100, ctx.currentTime, .03); }catch(e){}
+    const m = mixOf(+t), T = ctx.currentTime;
+    try{
+      n.g.gain.setTargetAtTime(trackGain(+t), T, .03);
+      if (n.p) n.p.pan.setTargetAtTime(m.pan / 100, T, .03);
+      n.rs.gain.setTargetAtTime(sendGain(m.rev), T, .03);
+      n.ds.gain.setTargetAtTime(sendGain(m.dly), T, .03);
+    }catch(e){}
   }
+  applyFx(false);
   drawMixState();
 }
 function trackNode(c, dest, t){
   if (mixNodes[t]) return mixNodes[t].g;
-  const g = c.createGain(); g.gain.value = trackGain(t);
-  let p = null;
-  if (c.createStereoPanner){ p = c.createStereoPanner(); p.pan.value = mixOf(t).pan / 100; g.connect(p).connect(dest); } else g.connect(dest);
-  mixNodes[t] = { g, p };
+  const m = mixOf(t), g = c.createGain(); g.gain.value = trackGain(t);
+  let p = null, out = g;
+  if (c.createStereoPanner){ p = c.createStereoPanner(); p.pan.value = m.pan / 100; g.connect(p); out = p; }
+  out.connect(dest);
+  const rs = c.createGain(), ds = c.createGain(); rs.gain.value = sendGain(m.rev); ds.gain.value = sendGain(m.dly);
+  if (fxNodes){ out.connect(rs).connect(fxNodes.revIn); out.connect(ds).connect(fxNodes.dlyIn); }
+  const a = c.createAnalyser(); a.fftSize = 512; out.connect(a);
+  mixNodes[t] = { g, p, rs, ds, a };
+  startMeters();
   return g;
 }
 function note(dest, bufs, ev, t, dur){
   const p = ev.instrument||0, b = bufs[p];
   if (b) sampleNote(dest, b, p, ev.pitch, t, dur, ev.volume); else synthNote(dest, ev.pitch, t, dur, ev.volume);
 }
+/* level meters */
+let meterRAF = 0; const meterLv = {}, meterBuf = new Float32Array(512);
+function peakDb(a){ a.getFloatTimeDomainData(meterBuf); let pk = 0; for (let i = 0; i < meterBuf.length; i++){ const v = Math.abs(meterBuf[i]); if (v > pk) pk = v; } return pk > 1e-5 ? 20 * Math.log10(pk) : -99; }
+function startMeters(){ if (!meterRAF) meterRAF = requestAnimationFrame(meterTick); }
+function meterTick(){
+  meterRAF = 0; let live = false;
+  document.querySelectorAll('#mixer .meter').forEach(el => {
+    const k = el.dataset.t, n = k === 'master' ? masterMeter : mixNodes[k] && mixNodes[k].a;
+    const target = n && $('#play').dataset.on ? Math.max(0, Math.min(1, (peakDb(n) + 48) / 54)) : 0;
+    const cur = meterLv[k] || 0, v = target > cur ? target : Math.max(target, cur - .025);
+    meterLv[k] = v; if (v > .001 || target > 0) live = true;
+    el.style.setProperty('--lv', (v * 100).toFixed(1) + '%');
+    el.classList.toggle('clip', v > .93);
+  });
+  if (live || $('#play').dataset.on) meterRAF = requestAnimationFrame(meterTick);
+}
 
+/* knob + fader controls (pointer drag, wheel, keys, double-click resets) */
+const mixCtl = [];
+const clampStep = (v, o) => Math.max(o.min, Math.min(o.max, Math.round(v / (o.step || 1)) * (o.step || 1)));
+function dragCtl(el, o, fromPointer){
+  const setV = v => { v = clampStep(v, o); if (v !== o.get()){ o.set(v); applyMix(); } };
+  el.tabIndex = 0; el.setAttribute('role', 'slider'); el.setAttribute('aria-label', o.aria); el.setAttribute('aria-valuemin', o.min); el.setAttribute('aria-valuemax', o.max);
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.focus({ preventScroll: true }); el.setPointerCapture(e.pointerId); el.classList.add('drag');
+    const y0 = e.clientY, v0 = o.get(), abs = fromPointer && fromPointer(e, true);
+    if (abs != null) setV(abs);
+    const mv = ev => { const a = fromPointer && fromPointer(ev, false); setV(a != null ? a : v0 + (y0 - ev.clientY) * (o.max - o.min) / (ev.shiftKey ? 600 : 150)); };
+    const up = () => { el.classList.remove('drag'); el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+  el.addEventListener('wheel', e => { e.preventDefault(); setV(o.get() - Math.sign(e.deltaY) * (o.step || 1) * (e.shiftKey ? 1 : 2)); }, { passive: false });
+  el.addEventListener('keydown', e => {
+    const s = o.step || 1, k = e.key, big = (o.max - o.min) / 10;
+    const d = { ArrowUp: s, ArrowRight: s, ArrowDown: -s, ArrowLeft: -s, PageUp: big, PageDown: -big }[k];
+    if (d != null){ e.preventDefault(); setV(o.get() + d); } else if (k === 'Home'){ e.preventDefault(); setV(o.min); } else if (k === 'End'){ e.preventDefault(); setV(o.max); }
+  });
+  el.addEventListener('dblclick', () => setV(o.def));
+  return setV;
+}
+function arcD(a0, a1){
+  const P = a => [20 + 15 * Math.sin(a * Math.PI / 180), 20 - 15 * Math.cos(a * Math.PI / 180)];
+  if (a1 - a0 < .5) a1 = a0 + .5;
+  const [x0, y0] = P(a0), [x1, y1] = P(a1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A15 15 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+function knob(o){
+  const w = document.createElement('div'); w.className = 'knob' + (o.cls ? ' ' + o.cls : '');
+  const k = document.createElement('div'); k.className = 'kn';
+  k.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true"><path class="kt" d="' + arcD(-135, 135) + '"/><path class="kv"/><circle class="kf" cx="20" cy="20" r="11"/><line class="kp" x1="20" y1="19" x2="20" y2="11"/></svg>';
+  const lb = document.createElement('span'); lb.className = 'kl'; lb.textContent = o.label;
+  const vv = document.createElement('span'); vv.className = 'kvv';
+  w.append(k, lb, vv); dragCtl(k, o);
+  const kv = k.querySelector('.kv'), kp = k.querySelector('.kp');
+  mixCtl.push(() => {
+    const v = o.get(), a = -135 + 270 * (v - o.min) / (o.max - o.min), txt = o.fmt(v);
+    kv.setAttribute('d', o.bipolar ? arcD(Math.min(0, a), Math.max(0, a)) : arcD(-135, a));
+    kp.setAttribute('transform', 'rotate(' + a.toFixed(1) + ' 20 20)');
+    k.setAttribute('aria-valuenow', v); k.setAttribute('aria-valuetext', txt); vv.textContent = txt;
+  });
+  return w;
+}
+const dbTxt = v => v === 0 ? '−∞' : (() => { const d = 20 * Math.log10(volGain(v)); return (d >= -.05 ? '+' : '') + d.toFixed(1); })();
+const dbAt = d => 80 * Math.pow(10, d / 40);         // fader position for a dB value
+function fader(o, meterKey){
+  const f = document.createElement('div'); f.className = 'fader';
+  const marks = [[4, '+4'], [0, '0'], [-6, '6'], [-12, '12'], [-24, '24'], [-40, '40']];
+  f.innerHTML = '<div class="fd-scale">' + marks.map(([d, l]) => `<span style="--p:${(dbAt(d) / 100).toFixed(3)}"${d === 0 ? ' class="u"' : ''}>${l}</span>`).join('') + '</div>' +
+    '<div class="fd-groove"></div><div class="fd-cap"></div><div class="meter" data-t="' + meterKey + '"><i></i></div>';
+  const posOf = e => { const r = f.getBoundingClientRect(), cap = 22, y = e.clientY - r.top - 9 - cap / 2; return 100 * (1 - y / (r.height - 18 - cap)); };
+  let grab = 0;
+  dragCtl(f, o, (e, first) => {
+    if (first){ const cap = f.querySelector('.fd-cap').getBoundingClientRect(); grab = (e.clientY >= cap.top - 4 && e.clientY <= cap.bottom + 4) ? posOf(e) - o.get() : 0; }
+    return posOf(e) - grab;
+  });
+  mixCtl.push(() => { const v = o.get(); f.style.setProperty('--v', (v / 100).toFixed(4)); f.setAttribute('aria-valuenow', v); f.setAttribute('aria-valuetext', dbTxt(v) + ' dB'); });
+  return f;
+}
 /* Voice → instrument rows. Programs are written into the ABC as %%MIDI program so MIDI export matches. */
 function voiceIds(){
   const seen = [], t = ta.value;
@@ -955,60 +1129,87 @@ function normalizeVoices(abc){
   const kl = L.splice(k, 1)[0]; L.splice(at, 0, kl);
   return L.join('\n');
 }
+const STRIP_COLORS = ['#A78BFA', '#22D3EE', '#F472B6', '#FBBF24', '#34D399', '#FB923C', '#60A5FA', '#E879F9'];
 function drawMixer(){
   const box = $('#mixer'); if (!box) return;
-  const ids = voiceIds(), sig = JSON.stringify(trackInfo.map(t => t.track)) + '|' + ids.join(',');
+  const ids = voiceIds(), sig = JSON.stringify(trackInfo) + '|' + ids.join(',');
   if (box.dataset.sig !== sig){
-    box.dataset.sig = sig; box.textContent = '';
-    const row = (key, label, isMaster) => {
-      const m = isMaster ? null : mixOf(key);
-      const r = document.createElement('div'); r.className = 'mix-row' + (isMaster ? ' master' : ''); r.dataset.t = key;
-      const nm = document.createElement('span'); nm.className = 'mix-name'; nm.textContent = label;
-      const vol = document.createElement('input'); vol.type = 'range'; vol.min = 0; vol.max = 100; vol.step = 1; vol.value = isMaster ? mix.master : m.vol; vol.id = 'mixVol-' + key; vol.setAttribute('aria-label', label + ' volume');
-      const out = document.createElement('output'); out.className = 'mix-val';
-      vol.addEventListener('input', () => { if (isMaster) mix.master = +vol.value; else mixOf(key).vol = +vol.value; applyMix(); });
-      r.append(nm, vol, out);
-      if (!isMaster){
-        const pan = document.createElement('input'); pan.type = 'range'; pan.min = -100; pan.max = 100; pan.step = 5; pan.value = m.pan; pan.className = 'mix-pan'; pan.id = 'mixPan-' + key; pan.setAttribute('aria-label', label + ' pan');
-        pan.addEventListener('input', () => { mixOf(key).pan = +pan.value; applyMix(); });
-        pan.addEventListener('dblclick', () => { pan.value = 0; mixOf(key).pan = 0; applyMix(); });
-        const pv = document.createElement('output'); pv.className = 'mix-panv';
-        const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'mix-btn m'; mb.textContent = 'M'; mb.title = 'Mute'; mb.setAttribute('aria-label', label + ' mute');
-        const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'mix-btn s'; sb.textContent = 'S'; sb.title = 'Solo'; sb.setAttribute('aria-label', label + ' solo');
-        mb.onclick = () => { mixOf(key).mute = !mixOf(key).mute; applyMix(); };
-        sb.onclick = () => { mixOf(key).solo = !mixOf(key).solo; applyMix(); };
-        const panWrap = document.createElement('span'); panWrap.className = 'mix-panw'; panWrap.append('L', pan, 'R', pv);
-        r.append(panWrap, mb, sb);
-      }
-      box.append(r);
+    box.dataset.sig = sig; box.textContent = ''; mixCtl.length = 0;
+    const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+    const pct = v => Math.round(v) + '%';
+    const chans = el('div', 'chans');
+    trackInfo.forEach((ti, i) => {
+      const key = ti.track, m = () => mixOf(key), vid = ids[key] ?? (key + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
+      const label = trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'Instrument';
+      const s = el('div', 'strip'); s.dataset.t = key; s.style.setProperty('--c', STRIP_COLORS[i % STRIP_COLORS.length]);
+      const nm = el('div', 'st-name', label); nm.title = label;
+      const inst = el('div', 'st-inst', progLabel(ti.prog)); inst.title = progLabel(ti.prog);
+      const kn = el('div', 'knobs');
+      kn.append(
+        knob({ label: 'Reverb', aria: label + ' reverb', min: 0, max: 100, def: 20, cls: 'rev', get: () => m().rev, set: v => m().rev = v, fmt: pct }),
+        knob({ label: 'Delay', aria: label + ' delay', min: 0, max: 100, def: 0, cls: 'dly', get: () => m().dly, set: v => m().dly = v, fmt: pct }),
+        knob({ label: 'Pan', aria: label + ' pan', min: -100, max: 100, step: 5, def: 0, bipolar: true, cls: 'pan', get: () => m().pan, set: v => m().pan = v, fmt: v => v === 0 ? 'C' : (v < 0 ? 'L' : 'R') + Math.abs(v) }));
+      const ms = el('div', 'ms');
+      const mb = el('button', 'mix-btn m', 'M'), sb = el('button', 'mix-btn s', 'S');
+      mb.type = sb.type = 'button'; mb.title = 'Mute'; sb.title = 'Solo'; mb.setAttribute('aria-label', label + ' mute'); sb.setAttribute('aria-label', label + ' solo');
+      mb.onclick = () => { m().mute = !m().mute; applyMix(); };
+      sb.onclick = () => { m().solo = !m().solo; applyMix(); };
+      ms.append(mb, sb);
+      const fd = fader({ aria: label + ' volume', min: 0, max: 100, def: 80, get: () => m().vol, set: v => m().vol = v }, key);
+      const db = el('output', 'st-db'); db.dataset.t = key;
+      s.append(nm, inst, kn, ms, fd, db);
+      chans.append(s);
+    });
+    // FX returns
+    const fx = el('div', 'strip fx');
+    const seg = (opts, get, set, aria) => {
+      const g = el('div', 'seg'); g.setAttribute('role', 'group'); g.setAttribute('aria-label', aria);
+      for (const [v, l] of opts){ const b = el('button', '', l); b.type = 'button'; b.dataset.v = v; b.onclick = () => { set(v); applyMix(); }; g.append(b); }
+      mixCtl.push(() => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === get() ? 'true' : 'false')));
+      return g;
     };
-    trackInfo.forEach(ti => { const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : ''; row(ti.track, trackInfo.length > 1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', false); });
-    row('master', 'Master', true);
+    const rv = el('div', 'fx-sec'), dl = el('div', 'fx-sec');
+    rv.append(el('div', 'fx-h', 'REVERB'),
+      seg(Object.entries(REV).map(([k, v]) => [k, v.label]), () => mix.fx.rev.size, v => mix.fx.rev.size = v, 'Reverb size'),
+      knob({ label: 'Level', aria: 'Reverb level', min: 0, max: 100, def: 80, cls: 'rev big', get: () => mix.fx.rev.ret, set: v => mix.fx.rev.ret = v, fmt: v => dbTxt(v) }));
+    const dk = el('div', 'knobs two');
+    dk.append(
+      knob({ label: 'Feedback', aria: 'Delay feedback', min: 0, max: 90, def: 35, cls: 'dly', get: () => mix.fx.dly.fb, set: v => mix.fx.dly.fb = v, fmt: pct }),
+      knob({ label: 'Level', aria: 'Delay level', min: 0, max: 100, def: 70, cls: 'dly', get: () => mix.fx.dly.ret, set: v => mix.fx.dly.ret = v, fmt: v => dbTxt(v) }));
+    dl.append(el('div', 'fx-h', 'DELAY'),
+      seg(DLY_ORDER.map(k => [k, DLY[k][1]]), () => mix.fx.dly.time, v => mix.fx.dly.time = v, 'Delay time'), dk);
+    fx.append(el('div', 'st-name', 'Effects'), el('div', 'st-inst', 'ส่งเสียงจากแต่ละแนว'), rv, el('div', 'fx-div'), dl);
+    // master
+    const ms = el('div', 'strip master'); ms.dataset.t = 'master';
+    ms.append(el('div', 'st-name', 'Master'), el('div', 'st-inst', 'ความดังรวม'), el('div', 'st-spacer'),
+      fader({ aria: 'Master volume', min: 0, max: 100, def: 80, get: () => mix.master, set: v => mix.master = v }, 'master'));
+    const mdb = el('output', 'st-db'); mdb.dataset.t = 'master'; ms.append(mdb);
+    box.append(chans, fx, ms);
   }
-  drawMixState();
+  drawMixState(); mixHint();
 }
+function mixHint(){ const b = $('#mixer'), h = $('#mixHint'); if (b && h) h.hidden = b.scrollWidth <= b.clientWidth + 2 || b.scrollLeft > 40; }
+addEventListener('resize', mixHint); $('#mixer').addEventListener('scroll', mixHint, { passive: true }); $('#mixBox').addEventListener('toggle', mixHint);
 function drawMixState(){
   const anySolo = Object.values(mix.tracks).some(x => x.solo);
-  document.querySelectorAll('#mixer .mix-row').forEach(r => {
-    const key = r.dataset.t, isMaster = key === 'master', m = isMaster ? null : mixOf(+key);
-    const v = isMaster ? mix.master : m.vol;
-    r.querySelector('.mix-val').textContent = v === 0 ? '−∞' : ((20 * Math.log10(volGain(v))) >= 0 ? '+' : '') + (20 * Math.log10(volGain(v))).toFixed(1) + ' dB';
-    if (!isMaster){
-      const pv = r.querySelector('.mix-panv'); pv.textContent = m.pan === 0 ? 'C' : (m.pan < 0 ? 'L' : 'R') + Math.abs(m.pan);
-      r.querySelector('.m').setAttribute('aria-pressed', m.mute ? 'true' : 'false');
-      r.querySelector('.s').setAttribute('aria-pressed', m.solo ? 'true' : 'false');
-      r.classList.toggle('silent', m.mute || (anySolo && !m.solo));
-    }
+  mixCtl.forEach(f => f());
+  document.querySelectorAll('#mixer .st-db').forEach(o => { const k = o.dataset.t, v = k === 'master' ? mix.master : mixOf(+k).vol; o.textContent = dbTxt(v) + (v ? ' dB' : ''); });
+  document.querySelectorAll('#mixer .strip[data-t]').forEach(r => {
+    const key = r.dataset.t; if (key === 'master') return;
+    const m = mixOf(+key);
+    r.querySelector('.m').setAttribute('aria-pressed', m.mute ? 'true' : 'false');
+    r.querySelector('.s').setAttribute('aria-pressed', m.solo ? 'true' : 'false');
+    r.classList.toggle('silent', m.mute || (anySolo && !m.solo));
   });
   const sum = $('#mixSum');
   if (sum){
     const n = Object.entries(mix.tracks).filter(([t]) => trackInfo.some(x => x.track === +t));
     const muted = n.filter(([, x]) => x.mute).length, solo = n.filter(([, x]) => x.solo).length;
-    sum.textContent = solo ? '· Solo ' + solo : muted ? '· Mute ' + muted : '';
+    sum.textContent = '· ' + REV[mix.fx.rev.size].label + ' · Delay ' + DLY[mix.fx.dly.time][1] + (solo ? ' · Solo ' + solo : muted ? ' · Mute ' + muted : '');
   }
 }
 $('#mixReset').addEventListener('click', () => {
-  mix.master = 80; mix.tracks = {};
+  Object.assign(mix, MIX_DEF());
   document.querySelector('#mixer').dataset.sig = ''; drawMixer(); applyMix();
 });
 function drawVoiceRows(){
@@ -1110,6 +1311,8 @@ async function play(from = cue, to = null){
   if (tok !== playToken) return;
   master = c.createGain(); master.gain.value = volGain(mix.master); mixNodes = {};
   const comp = c.createDynamicsCompressor(); master.connect(comp).connect(c.destination);
+  masterMeter = c.createAnalyser(); masterMeter.fftSize = 512; comp.connect(masterMeter);
+  makeFx(c, master);
   const spw = msPerWhole()/1000, endW = to == null ? tw : Math.min(to, tw), t0 = c.currentTime + .1 - from*spw;
   for (const ev of events){
     if (ev.start < from - 1e-6 || ev.start >= endW - 1e-6) continue;
@@ -1126,16 +1329,18 @@ async function play(from = cue, to = null){
   endTimer = setTimeout(()=>{
     if (tok !== playToken) return;
     clearHL();
-    if (loopBar) play(loopBar.a, loopBar.b);
-    else if ($('#loop').checked) play(0);
-    else { stopPlay(); cue = 0; showCue(); }
+    if (loopBar){ stopPlay(true); play(loopBar.a, loopBar.b); }
+    else if ($('#loop').checked){ stopPlay(true); play(0); }
+    else { stopPlay(true); cue = 0; showCue(); }
   }, ((endW - from)*spw + .25)*1000);
 }
-function stopPlay(){
+function stopPlay(tail){
   playToken++;
   clearTimeout(endTimer);
   if (timer){ try{ timer.stop(); }catch(e){} timer=null; }
-  if (master){ const m=master; try{ m.gain.setTargetAtTime(0, ctx.currentTime, .02); }catch(e){} setTimeout(()=>{ try{m.disconnect();}catch(e){} }, 150); master=null; }
+  // tail = natural end: let reverb/delay ring out instead of cutting them
+  const ring = tail ? Math.max(REV[mix.fx.rev.size].dur, mix.fx.dly.ret && mix.fx.dly.fb ? 1.5 : 0) : 0;
+  if (master){ const m=master; try{ if (ring) m.gain.setTargetAtTime(0, ctx.currentTime + ring * .6, ring * .15); else m.gain.setTargetAtTime(0, ctx.currentTime, .02); }catch(e){} setTimeout(()=>{ try{m.disconnect();}catch(e){} }, ring ? ring * 1000 + 600 : 150); master=null; fxNodes=null; masterMeter=null; }
   clearHL();
   const b=$('#play'); b.setAttribute('aria-label','เล่น'); delete b.dataset.on;
   cancelAnimationFrame(progRAF); progRAF=0; span = null; showCue();
