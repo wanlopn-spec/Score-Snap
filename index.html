@@ -241,6 +241,12 @@ html.ai-off #fixBars{display:none}
 /* score card */
 .sound{min-width:0;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;padding:12px;border-radius:var(--r);background:var(--surface-2);border:1px solid var(--line)}
 .sound .lbl{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--ink-2);font-weight:500;width:100%}
+.thaiband{width:100%;display:grid;gap:8px;padding:10px 12px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));background:var(--accent-soft)}
+.thaiband .tb-h{font-weight:700;font-size:.86rem;color:var(--accent)}
+.tb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tb-tune{display:flex;align-items:center;gap:8px;font-size:.84rem;font-weight:600;flex-wrap:wrap}
+.tb-tune span{font-weight:400;color:var(--ink-2);font-size:.78rem}
+.thaiband .note{margin:0}
 .voices{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 320px;min-width:0}
 .voices label{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2);min-width:0;flex:1 1 200px}
 .voices select{width:100%;background:var(--surface)}
@@ -633,6 +639,12 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
 
       <div class="sound" role="group" aria-label="เสียง">
         <span class="lbl"><svg class="i"><use href="#i-volume"/></svg>เครื่องดนตรี</span>
+        <div class="thaiband" id="thaiBand" hidden>
+          <span class="tb-h">วงดนตรีไทย</span>
+          <div class="tb-chips"><button type="button" class="chip" data-band="piphat" aria-pressed="false">วงปี่พาทย์</button><button type="button" class="chip" data-band="saichai" aria-pressed="false">วงเครื่องสาย</button><button type="button" class="chip" data-band="mahori" aria-pressed="false">วงมโหรี</button><button type="button" class="chip" data-band="isan" aria-pressed="false">วงพื้นบ้านอีสาน</button></div>
+          <label class="tb-tune"><input type="checkbox" id="thaiTune"> เสียงแบบไทย 7 เสียงเท่า <span>(ปรับระดับเสียงให้ตรงระบบเสียงไทย)</span></label>
+          <p class="note">เลือกวงเพื่อใส่เครื่องดนตรีให้ทุกแนวพร้อมกัน หรือเลือกทีละแนวในช่องด้านล่าง (กลุ่ม Thai instruments) · เสียงเป็นเสียงใกล้เคียงจากชุดเสียงมาตรฐาน</p>
+        </div>
         <div class="voices" id="voices"></div>
         <label class="tp">ทรานสโพส <select id="transpose"></select></label>
         <div class="status" id="sndStatus" aria-live="polite"></div>
@@ -849,6 +861,11 @@ function buildEvents(){
     });
     events.sort((x,y)=>x.start-y.start);
   }catch(e){ events = []; }
+  tet7 = null;
+  if (/^%ss-thai-tuning\s+on/m.test(ta.value)){
+    const k = (ta.value.match(/^K:\s*([A-Ga-g])([#b]?)/m) || [, 'C', '']);
+    tet7 = ((({ C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 })[k[1].toUpperCase()] + (k[2] === '#' ? 1 : k[2] === 'b' ? -1 : 0) + (+tsel.value)) % 12 + 12) % 12;
+  }
   drawVoiceRows();
 }
 function defaultQpm(){
@@ -869,6 +886,23 @@ const GM = ["Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Pia
 const TH = {0:'แกรนด์เปียโน',1:'เปียโนเสียงสว่าง',4:'เปียโนไฟฟ้า',6:'ฮาร์ปซิคอร์ด',8:'เชเลสตา',9:'กล็อกเคนสปีล',10:'กล่องดนตรี',11:'ไวบราโฟน',12:'มาริมบา',13:'ไซโลโฟน',14:'ระฆังท่อ',19:'ออร์แกนโบสถ์',21:'แอคคอร์เดียน',22:'ฮาร์โมนิกา',24:'กีตาร์คลาสสิก (สายไนลอน)',25:'กีตาร์โปร่ง (สายเหล็ก)',26:'กีตาร์ไฟฟ้า (แจ๊ส)',27:'กีตาร์ไฟฟ้า (คลีน)',29:'กีตาร์ไฟฟ้า (โอเวอร์ไดรฟ์)',30:'กีตาร์ไฟฟ้า (ดิสทอร์ชัน)',32:'ดับเบิลเบส',33:'เบสไฟฟ้า (นิ้ว)',40:'ไวโอลิน',41:'วิโอลา',42:'เชลโล',43:'ดับเบิลเบส (สี)',45:'เครื่องสาย (ดีด)',46:'ฮาร์ป',47:'ทิมปานี',48:'วงเครื่องสาย',52:'คอรัส อา',53:'คอรัส โอ',56:'ทรัมเป็ต',57:'ทรอมโบน',58:'ทูบา',60:'เฟรนช์ฮอร์น',61:'กลุ่มเครื่องทองเหลือง',64:'โซปราโนแซกโซโฟน',65:'อัลโตแซกโซโฟน',66:'เทเนอร์แซกโซโฟน',67:'บาริโทนแซกโซโฟน',68:'โอโบ',69:'อิงลิชฮอร์น',70:'บาสซูน',71:'คลาริเน็ต',72:'พิคโคโล',73:'ฟลูต',74:'รีคอร์เดอร์',75:'แพนฟลูต',78:'วิสเซิล',79:'โอคารินา',104:'ซีตาร์',105:'แบนโจ',107:'โคโตะ',108:'คาลิมบา',109:'แก็บไปป์',110:'ฟิดเดิล',114:'สตีลดรัม',115:'วู้ดบล็อก',116:'ไทโกะ'};
 const FAM = ['Piano','Chromatic Percussion','Organ','Guitar','Bass','Strings','Ensemble','Brass','Reed','Pipe','Synth Lead','Synth Pad','Synth Effects','Ethnic','Percussive','Sound Effects'];
 const progLabel = p => GM[p];
+/* Thai instruments: each plays through the closest General MIDI sound; the choice is kept in the ABC as a %ss-thai <key> comment */
+const THAI_INST = [
+  ['ranat-ek', 'Ranat Ek', 'ระนาดเอก', 13], ['ranat-thum', 'Ranat Thum', 'ระนาดทุ้ม', 12],
+  ['khong-yai', 'Khong Wong Yai', 'ฆ้องวงใหญ่', 11], ['khong-lek', 'Khong Wong Lek', 'ฆ้องวงเล็ก', 114],
+  ['saw-duang', 'Saw Duang', 'ซอด้วง', 110], ['saw-u', 'Saw U', 'ซออู้', 42], ['saw-sam-sai', 'Saw Sam Sai', 'ซอสามสาย', 40],
+  ['jakhe', 'Jakhe', 'จะเข้', 107], ['khim', 'Khim', 'ขิม', 15],
+  ['khlui', 'Khlui Phiang O', 'ขลุ่ยเพียงออ', 75], ['khlui-lip', 'Khlui Lip', 'ขลุ่ยหลิบ', 74], ['pi-nai', 'Pi Nai', 'ปี่ใน', 111],
+  ['khaen', 'Khaen', 'แคน', 22], ['phin', 'Phin', 'พิณ', 106], ['pong-lang', 'Pong Lang', 'โปงลาง', 108], ['sueng', 'Sueng', 'ซึง', 105],
+  ['ching', 'Ching', 'ฉิ่ง', 112], ['khap-rong', 'Thai Vocal', 'ขับร้อง', 53],
+].map(([key, en, th, gm]) => ({ key, en, th, gm }));
+const THAI_BY = Object.fromEntries(THAI_INST.map(x => [x.key, x]));
+const THAI_BANDS = [
+  ['piphat', 'วงปี่พาทย์', ['ranat-ek', 'khong-yai', 'ranat-thum', 'pi-nai', 'khong-lek']],
+  ['saichai', 'วงเครื่องสาย', ['saw-duang', 'saw-u', 'jakhe', 'khlui', 'khim']],
+  ['mahori', 'วงมโหรี', ['saw-sam-sai', 'ranat-ek', 'khong-yai', 'saw-duang', 'jakhe', 'khlui']],
+  ['isan', 'วงพื้นบ้านอีสาน', ['khaen', 'phin', 'pong-lang', 'khlui']],
+];
 const SUSTAIN = p => (p>=16&&p<=23)||(p>=40&&p<=44)||(p>=48&&p<=95)||(p>=109&&p<=111);
 const SLOT = 2.5, LOW = 21, STEP = 3, NSLOT = 30;
 
@@ -1027,9 +1061,17 @@ function trackNode(c, dest, t){
   startMeters();
   return g;
 }
+// Thai 7-tone equal tuning: scale degree d of the key sits at d·1200/7 cents above the tonic
+let tet7 = null;                                     // tonic pitch class when Thai tuning is on
+const TET_DEG = { 0: 0, 2: 1, 4: 2, 5: 3, 7: 4, 9: 5, 11: 6 };
+function tuned(m){
+  if (tet7 == null) return m;
+  const rel = ((m - tet7) % 12 + 12) % 12, d = TET_DEG[rel];
+  return d == null ? m : m + (d * 12 / 7 - rel);
+}
 function note(dest, bufs, ev, t, dur){
-  const p = ev.instrument||0, b = bufs[p];
-  if (b) sampleNote(dest, b, p, ev.pitch, t, dur, ev.volume); else synthNote(dest, ev.pitch, t, dur, ev.volume);
+  const p = ev.instrument||0, b = bufs[p], m = tuned(ev.pitch);
+  if (b) sampleNote(dest, b, p, m, t, dur, ev.volume); else synthNote(dest, m, t, dur, ev.volume);
 }
 /* level meters */
 let meterRAF = 0; const meterLv = {}, meterBuf = new Float32Array(512);
@@ -1144,7 +1186,7 @@ function drawMixer(){
       const label = trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'Instrument';
       const s = el('div', 'strip'); s.dataset.t = key; s.style.setProperty('--c', STRIP_COLORS[i % STRIP_COLORS.length]);
       const nm = el('div', 'st-name', label); nm.title = label;
-      const inst = el('div', 'st-inst', progLabel(ti.prog)); inst.title = progLabel(ti.prog);
+      const inst = el('div', 'st-inst', instLabel(ti)); inst.title = instLabel(ti) + (ti.thai ? ' · ' + THAI_BY[ti.thai].th : '');
       const kn = el('div', 'knobs');
       kn.append(
         knob({ label: 'Reverb', aria: label + ' reverb', min: 0, max: 100, def: 20, cls: 'rev', get: () => m().rev, set: v => m().rev = v, fmt: pct }),
@@ -1213,51 +1255,104 @@ $('#mixReset').addEventListener('click', () => {
   Object.assign(mix, MIX_DEF());
   document.querySelector('#mixer').dataset.sig = ''; drawMixer(); applyMix();
 });
+const instLabel = ti => ti.thai ? THAI_BY[ti.thai].en : progLabel(ti.prog);
+const isThaiScore = () => /^C:\s*แปลงจากโน้ตไทย/m.test(ta.value) || /^%ss-thai\s/m.test(ta.value);
+// header line that owns a voice's settings (its V: line, or K: for a single voice); -1 if none
+function voiceLine(lines, track){
+  const ids = voiceIds(), vid = trackInfo.length > 1 ? ids[track] : undefined;
+  if (vid !== undefined){ const re = new RegExp('^V:\\s*' + vid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|$)'); return lines.findIndex(l => re.test(l)); }
+  return lines.findIndex(l => /^K:/.test(l));
+}
+function thaiOf(track, prog){
+  const L = ta.value.split('\n'), at = voiceLine(L, track); if (at < 0) return '';
+  for (let i = at + 1; i < L.length && /^%/.test(L[i]); i++){ const m = L[i].match(/^%ss-thai\s+(\S+)/); if (m) return THAI_BY[m[1]] && THAI_BY[m[1]].gm === prog ? m[1] : ''; }
+  return '';
+}
 function drawVoiceRows(){
+  trackInfo.forEach(ti => { ti.thai = thaiOf(ti.track, ti.prog); });
+  drawThaiBand();
   drawMixer();
   const box = $('#voices'), ids = voiceIds();
   const sig = JSON.stringify(trackInfo);
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig; box.textContent = '';
+  const thaiFirst = isThaiScore();
   trackInfo.forEach((ti) => {
     const lab = document.createElement('label'), sel = document.createElement('select');
     sel.id = 'prog-' + ti.track;
     const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
     lab.append(trackInfo.length>1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', sel);
+    const thaiGroup = document.createElement('optgroup'); thaiGroup.label = 'Thai instruments · เครื่องดนตรีไทย';
+    THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = 't:' + x.key; o.textContent = x.en + ' · ' + x.th; thaiGroup.append(o); });
+    if (thaiFirst) sel.append(thaiGroup);
     FAM.forEach((f, fi) => {
       const og = document.createElement('optgroup'); og.label = f;
       for (let p = fi*8; p < fi*8+8; p++){ const o=document.createElement('option'); o.value=p; o.textContent=progLabel(p); og.append(o); }
       sel.append(og);
     });
-    sel.value = ti.prog;
-    sel.addEventListener('change', () => { setProgram(ti.track, +sel.value); });
+    if (!thaiFirst) sel.append(thaiGroup);
+    sel.value = ti.thai ? 't:' + ti.thai : ti.prog;
+    sel.addEventListener('change', () => {
+      const v = sel.value;
+      if (v.startsWith('t:')){ const x = THAI_BY[v.slice(2)]; setProgram(ti.track, x.gm, x.key); } else setProgram(ti.track, +v, '');
+    });
     box.append(lab);
   });
 }
-function setProgram(track, p){
-  ta.value = normalizeVoices(ta.value);
-  const lines = ta.value.split('\n'), ids = voiceIds(), vid = trackInfo.length>1 ? ids[track] : undefined;
-  let at = -1;
-  if (vid !== undefined){
-    const re = new RegExp('^V:\\s*' + vid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|$)'); at = lines.findIndex(l => re.test(l));
-    if (at < 0){                                   // voices that only appear as [V:x] in the body: give each a header line after K:, in voice order
-      const k = lines.findIndex(l => /^K:/.test(l)); if (k < 0) return;
-      let ins = k + 1; while (ins < lines.length && (/^(V:|%%)/.test(lines[ins]) && !/^\[/.test(lines[ins]))) ins++;
-      const have = new Set(lines.filter(l => /^V:/.test(l)).map(l => l.match(/^V:\s*([^\s\]]+)/)[1]));
-      const add = ids.filter(id => !have.has(id)).map(id => 'V:' + id);
-      lines.splice(ins, 0, ...add);
-      at = lines.findIndex(l => re.test(l));
-    }
+function drawThaiBand(){
+  const band = $('#thaiBand'); if (!band) return;
+  band.hidden = !isThaiScore();
+  $('#thaiTune').checked = /^%ss-thai-tuning\s+on/m.test(ta.value);
+  band.querySelectorAll('[data-band]').forEach(b => {
+    const list = (THAI_BANDS.find(x => x[0] === b.dataset.band) || [])[2] || [];
+    b.setAttribute('aria-pressed', trackInfo.length && trackInfo.every((ti, i) => ti.thai === list[i % list.length]) ? 'true' : 'false');
+  });
+}
+// write one voice's program (and Thai instrument tag) into the ABC lines; returns false when there is nowhere to put it
+function writeProgram(lines, track, p, thai){
+  const ids = voiceIds(), vid = trackInfo.length>1 ? ids[track] : undefined;
+  let at = voiceLine(lines, track);
+  if (vid !== undefined && at < 0){                // voices that only appear as [V:x] in the body: give each a header line after K:, in voice order
+    const k = lines.findIndex(l => /^K:/.test(l)); if (k < 0) return false;
+    let ins = k + 1; while (ins < lines.length && (/^(V:|%%)/.test(lines[ins]) && !/^\[/.test(lines[ins]))) ins++;
+    const have = new Set(lines.filter(l => /^V:/.test(l)).map(l => l.match(/^V:\s*([^\s\]]+)/)[1]));
+    lines.splice(ins, 0, ...ids.filter(id => !have.has(id)).map(id => 'V:' + id));
+    at = voiceLine(lines, track);
   }
   if (at < 0) at = lines.findIndex(l => /^K:/.test(l));
-  if (at < 0) return;
-  if (/^%%MIDI\s+program/.test(lines[at+1]||'')) lines[at+1] = '%%MIDI program ' + p;
-  else lines.splice(at+1, 0, '%%MIDI program ' + p);
+  if (at < 0) return false;
+  for (let i = at + 1; i < lines.length && /^(%%MIDI\s+program|%ss-thai\s)/.test(lines[i]); ) lines.splice(i, 1);
+  lines.splice(at + 1, 0, '%%MIDI program ' + p, ...(thai ? ['%ss-thai ' + thai] : []));
+  return true;
+}
+function setProgram(track, p, thai){
+  ta.value = normalizeVoices(ta.value);
+  const lines = ta.value.split('\n');
+  if (!writeProgram(lines, track, p, thai)) return;
   ta.value = lines.join('\n'); sel = null;
   if (isExample) setBadge('แก้ไขแล้ว', false);
   render(); updateSelLabel();
-  audio(); loadAll([p]).then(b => { if (!b[p] || !ctx || ctx.state!=='running') return; const g=ctx.createGain(); g.connect(ctx.destination); [0,4,7,12].forEach((d,i)=>sampleNote(g,b[p],p,60+d,ctx.currentTime+.05+i*.2,.35,95)); });
+  audio(); loadAll([p]).then(b => { if (!b[p] || !ctx || ctx.state!=='running') return; const g=ctx.createGain(); g.connect(ctx.destination); [0,4,7,12].forEach((d,i)=>sampleNote(g,b[p],p,tuned(60+d),ctx.currentTime+.05+i*.2,.35,95)); });
 }
+function setBand(key){
+  const list = (THAI_BANDS.find(x => x[0] === key) || [])[2]; if (!list) return;
+  ta.value = normalizeVoices(ta.value);
+  const lines = ta.value.split('\n'), tracks = trackInfo.map(t => t.track);
+  tracks.forEach((t, i) => { const x = THAI_BY[list[i % list.length]]; writeProgram(lines, t, x.gm, x.key); });
+  ta.value = lines.join('\n'); sel = null;
+  if (isExample) setBadge('แก้ไขแล้ว', false);
+  render(); updateSelLabel();
+  const name = THAI_BANDS.find(x => x[0] === key)[1];
+  toast(name + ': ' + tracks.map((t, i) => THAI_BY[list[i % list.length]].th).join(' · '));
+  audio(); loadAll([...new Set(list.slice(0, tracks.length).map(k => THAI_BY[k].gm))]);
+}
+function setThaiTuning(on){
+  const L = ta.value.split('\n').filter(l => !/^%ss-thai-tuning\s/.test(l));
+  if (on){ const k = L.findIndex(l => /^K:/.test(l)); L.splice(k < 0 ? L.length : k, 0, '%ss-thai-tuning on'); }
+  ta.value = L.join('\n'); render();
+}
+document.querySelectorAll('#thaiBand [data-band]').forEach(b => b.addEventListener('click', () => setBand(b.dataset.band)));
+$('#thaiTune').addEventListener('change', e => setThaiTuning(e.target.checked));
 
 let progRAF = 0;
 const fmtTime = s => { s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
