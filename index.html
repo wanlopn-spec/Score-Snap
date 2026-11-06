@@ -790,8 +790,8 @@ ta.addEventListener('input', ()=>{ clearTimeout(renderTimer); sel=null; updateSe
 /* ---------- audio ---------- */
 const GM = ["Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Piano", "Honkytonk Piano", "Electric Piano 1", "Electric Piano 2", "Harpsichord", "Clavinet", "Celesta", "Glockenspiel", "Music Box", "Vibraphone", "Marimba", "Xylophone", "Tubular Bells", "Dulcimer", "Drawbar Organ", "Percussive Organ", "Rock Organ", "Church Organ", "Reed Organ", "Accordion", "Harmonica", "Tango Accordion", "Acoustic Guitar Nylon", "Acoustic Guitar Steel", "Electric Guitar Jazz", "Electric Guitar Clean", "Electric Guitar Muted", "Overdriven Guitar", "Distortion Guitar", "Guitar Harmonics", "Acoustic Bass", "Electric Bass Finger", "Electric Bass Pick", "Fretless Bass", "Slap Bass 1", "Slap Bass 2", "Synth Bass 1", "Synth Bass 2", "Violin", "Viola", "Cello", "Contrabass", "Tremolo Strings", "Pizzicato Strings", "Orchestral Harp", "Timpani", "String Ensemble 1", "String Ensemble 2", "Synth Strings 1", "Synth Strings 2", "Choir Aahs", "Voice Oohs", "Synth Choir", "Orchestra Hit", "Trumpet", "Trombone", "Tuba", "Muted Trumpet", "French Horn", "Brass Section", "Synth Brass 1", "Synth Brass 2", "Soprano Sax", "Alto Sax", "Tenor Sax", "Baritone Sax", "Oboe", "English Horn", "Bassoon", "Clarinet", "Piccolo", "Flute", "Recorder", "Pan Flute", "Blown Bottle", "Shakuhachi", "Whistle", "Ocarina", "Lead 1 Square", "Lead 2 Sawtooth", "Lead 3 Calliope", "Lead 4 Chiff", "Lead 5 Charang", "Lead 6 Voice", "Lead 7 Fifths", "Lead 8 Bass  Lead", "Pad 1 New Age", "Pad 2 Warm", "Pad 3 Polysynth", "Pad 4 Choir", "Pad 5 Bowed", "Pad 6 Metallic", "Pad 7 Halo", "Pad 8 Sweep", "Fx 1 Rain", "Fx 2 Soundtrack", "Fx 3 Crystal", "Fx 4 Atmosphere", "Fx 5 Brightness", "Fx 6 Goblins", "Fx 7 Echoes", "Fx 8 Scifi", "Sitar", "Banjo", "Shamisen", "Koto", "Kalimba", "Bagpipe", "Fiddle", "Shanai", "Tinkle Bell", "Agogo", "Steel Drums", "Woodblock", "Taiko Drum", "Melodic Tom", "Synth Drum", "Reverse Cymbal", "Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet", "Telephone Ring", "Helicopter", "Applause", "Gunshot"];
 const TH = {0:'แกรนด์เปียโน',1:'เปียโนเสียงสว่าง',4:'เปียโนไฟฟ้า',6:'ฮาร์ปซิคอร์ด',8:'เชเลสตา',9:'กล็อกเคนสปีล',10:'กล่องดนตรี',11:'ไวบราโฟน',12:'มาริมบา',13:'ไซโลโฟน',14:'ระฆังท่อ',19:'ออร์แกนโบสถ์',21:'แอคคอร์เดียน',22:'ฮาร์โมนิกา',24:'กีตาร์คลาสสิก (สายไนลอน)',25:'กีตาร์โปร่ง (สายเหล็ก)',26:'กีตาร์ไฟฟ้า (แจ๊ส)',27:'กีตาร์ไฟฟ้า (คลีน)',29:'กีตาร์ไฟฟ้า (โอเวอร์ไดรฟ์)',30:'กีตาร์ไฟฟ้า (ดิสทอร์ชัน)',32:'ดับเบิลเบส',33:'เบสไฟฟ้า (นิ้ว)',40:'ไวโอลิน',41:'วิโอลา',42:'เชลโล',43:'ดับเบิลเบส (สี)',45:'เครื่องสาย (ดีด)',46:'ฮาร์ป',47:'ทิมปานี',48:'วงเครื่องสาย',52:'คอรัส อา',53:'คอรัส โอ',56:'ทรัมเป็ต',57:'ทรอมโบน',58:'ทูบา',60:'เฟรนช์ฮอร์น',61:'กลุ่มเครื่องทองเหลือง',64:'โซปราโนแซกโซโฟน',65:'อัลโตแซกโซโฟน',66:'เทเนอร์แซกโซโฟน',67:'บาริโทนแซกโซโฟน',68:'โอโบ',69:'อิงลิชฮอร์น',70:'บาสซูน',71:'คลาริเน็ต',72:'พิคโคโล',73:'ฟลูต',74:'รีคอร์เดอร์',75:'แพนฟลูต',78:'วิสเซิล',79:'โอคารินา',104:'ซีตาร์',105:'แบนโจ',107:'โคโตะ',108:'คาลิมบา',109:'แก็บไปป์',110:'ฟิดเดิล',114:'สตีลดรัม',115:'วู้ดบล็อก',116:'ไทโกะ'};
-const FAM = ['เปียโน','เพอร์คัชชันมีระดับเสียง','ออร์แกน / หีบเพลง','กีตาร์','เบส','เครื่องสาย','วงเครื่องสาย / คอรัส','เครื่องทองเหลือง','เครื่องลมไม้ (ลิ้น)','เครื่องเป่าลม (ขลุ่ย)','ซินธ์ ลีด','ซินธ์ แพด','ซินธ์ เอฟเฟกต์','เครื่องดนตรีนานาชาติ','เครื่องกระทบ','เสียงเอฟเฟกต์'];
-const progLabel = p => TH[p] ? TH[p]+' · '+GM[p] : GM[p];
+const FAM = ['Piano','Chromatic Percussion','Organ','Guitar','Bass','Strings','Ensemble','Brass','Reed','Pipe','Synth Lead','Synth Pad','Synth Effects','Ethnic','Percussive','Sound Effects'];
+const progLabel = p => GM[p];
 const SUSTAIN = p => (p>=16&&p<=23)||(p>=40&&p<=44)||(p>=48&&p<=95)||(p>=109&&p<=111);
 const SLOT = 2.5, LOW = 21, STEP = 3, NSLOT = 30;
 
@@ -839,7 +839,7 @@ function loadProg(p){
 }
 async function loadAll(progs){
   const need = progs.filter(p => !(p in bank));
-  if (need.length) setSnd('กำลังโหลดเสียง ' + need.map(p=>TH[p]||GM[p]).join(', ') + '…');
+  if (need.length) setSnd('กำลังโหลดเสียง ' + need.map(p=>GM[p]).join(', ') + '…');
   const bufs = await Promise.all(progs.map(loadProg));
   const bad = progs.filter((p,i)=>!bufs[i]);
   setSnd(bad.length ? 'โหลดเสียง ' + bad.map(p=>GM[p]).join(', ') + ' ไม่สำเร็จ ใช้เสียงสังเคราะห์แทน' : '');
@@ -879,7 +879,26 @@ function note(dest, bufs, ev, t, dur){
 }
 
 /* Voice → instrument rows. Programs are written into the ABC as %%MIDI program so MIDI export matches. */
-function voiceIds(){ const seen=[]; for (const m of ta.value.matchAll(/^V:\s*([^\s\]]+)/gm)) if (!seen.includes(m[1])) seen.push(m[1]); return seen; }
+function voiceIds(){
+  const seen = [], t = ta.value;
+  const sc = (t.match(/^%%score\s+(.*)$/m) || [])[1];
+  if (sc) for (const m of sc.matchAll(/[^\s(){}\[\]|]+/g)) if (!seen.includes(m[0])) seen.push(m[0]);
+  for (const m of t.matchAll(/^V:\s*([^\s\]]+)/gm)) if (!seen.includes(m[1])) seen.push(m[1]);
+  for (const m of t.matchAll(/\[V:\s*([^\s\]]+)/g)) if (!seen.includes(m[1])) seen.push(m[1]);
+  return seen;
+}
+function voiceName(id){ const m = ta.value.match(new RegExp('^V:\\s*' + String(id).replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b[^\\n]*?(?:name|nm)="([^"]*)"', 'm')); return m ? m[1] : ''; }
+// Per-voice instruments only work when the voice definitions come after K: — otherwise the player reads
+// every %%MIDI program as a whole-tune setting. Move K: up (and give body-only voices a header line).
+function normalizeVoices(abc){
+  const L = abc.split('\n'), k = L.findIndex(l => /^K:/.test(l));
+  if (k < 0) return abc;
+  const firstV = L.findIndex((l, i) => i < k && /^V:/.test(l));
+  if (firstV < 0) return abc;
+  let at = firstV; if (at > 0 && /^%%score/.test(L[at-1])) at--;
+  const kl = L.splice(k, 1)[0]; L.splice(at, 0, kl);
+  return L.join('\n');
+}
 function drawVoiceRows(){
   const box = $('#voices'), ids = voiceIds();
   const sig = JSON.stringify(trackInfo);
@@ -888,7 +907,8 @@ function drawVoiceRows(){
   trackInfo.forEach((ti) => {
     const lab = document.createElement('label'), sel = document.createElement('select');
     sel.id = 'prog-' + ti.track;
-    lab.append(trackInfo.length>1 ? 'แนว ' + (ids[ti.track] ?? ti.track+1) : 'เครื่องดนตรี', sel);
+    const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
+    lab.append(trackInfo.length>1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', sel);
     FAM.forEach((f, fi) => {
       const og = document.createElement('optgroup'); og.label = f;
       for (let p = fi*8; p < fi*8+8; p++){ const o=document.createElement('option'); o.value=p; o.textContent=progLabel(p); og.append(o); }
@@ -900,9 +920,20 @@ function drawVoiceRows(){
   });
 }
 function setProgram(track, p){
+  ta.value = normalizeVoices(ta.value);
   const lines = ta.value.split('\n'), ids = voiceIds(), vid = trackInfo.length>1 ? ids[track] : undefined;
   let at = -1;
-  if (vid !== undefined){ const re = new RegExp('^V:\\s*' + vid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|$)'); at = lines.findIndex(l => re.test(l)); }
+  if (vid !== undefined){
+    const re = new RegExp('^V:\\s*' + vid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|$)'); at = lines.findIndex(l => re.test(l));
+    if (at < 0){                                   // voices that only appear as [V:x] in the body: give each a header line after K:, in voice order
+      const k = lines.findIndex(l => /^K:/.test(l)); if (k < 0) return;
+      let ins = k + 1; while (ins < lines.length && (/^(V:|%%)/.test(lines[ins]) && !/^\[/.test(lines[ins]))) ins++;
+      const have = new Set(lines.filter(l => /^V:/.test(l)).map(l => l.match(/^V:\s*([^\s\]]+)/)[1]));
+      const add = ids.filter(id => !have.has(id)).map(id => 'V:' + id);
+      lines.splice(ins, 0, ...add);
+      at = lines.findIndex(l => re.test(l));
+    }
+  }
   if (at < 0) at = lines.findIndex(l => /^K:/.test(l));
   if (at < 0) return;
   if (/^%%MIDI\s+program/.test(lines[at+1]||'')) lines[at+1] = '%%MIDI program ' + p;
@@ -1592,7 +1623,7 @@ function lockUI(on){
   const f = $('#fixBars'); if (f) f.disabled = on || !sample;
 }
 function applyAbc(abc, badge){
-  ta.value = abc; sel = null; render.userTempo = false; render(); updateSelLabel();
+  ta.value = normalizeVoices(abc); sel = null; render.userTempo = false; render(); updateSelLabel();
   if (badge) setBadge(badge, false);
 }
 
@@ -2091,9 +2122,9 @@ const MX = (() => {
     let abc = `X:1\nT:${title}\n` + (composer ? `C:${composer}\n` : '') + `M:${header.M||'4/4'}\nL:1/8\n` + (header.Q ? `Q:${header.Q}\n` : '');
     const multi = voices.length > 1;
     if (multi){
+      abc += `K:${header.K||'C'}\n`;
       abc += `%%score ${scoreGroups.join(' ')}\n`;
       voices.forEach(v => { abc += `V:${v.id} clef=${v.clef}${v.name ? ` name="${v.name.replace(/"/g,'')}"` : ''}\n%%MIDI program ${v.prog}\n`; });
-      abc += `K:${header.K||'C'}\n`;
     } else {
       abc += `K:${header.K||'C'}${voices[0] && voices[0].clef !== 'treble' ? ' clef='+voices[0].clef : ''}\n%%MIDI program ${voices[0] ? voices[0].prog : 0}\n`;
     }
@@ -2944,9 +2975,9 @@ const THAI = (() => {
       head.push('K:C', '%%MIDI program ' + prog);
       bodies[0].forEach(l => { body += l.music + '\n' + (l.lyric ? 'w: ' + l.lyric + '\n' : ''); });
     } else {
+      head.push('K:C');
       head.push('%%score ' + p.parts.map((_, i) => i + 1).join(' '));
       p.parts.forEach((pt, i) => head.push('V:' + (i + 1) + ' clef=treble' + (pt.name ? ' name="' + pt.name.replace(/"/g, '') + '"' : ''), '%%MIDI program ' + prog));
-      head.push('K:C');
       const rows = Math.max(...bodies.map(b => b.length));
       for (let r = 0; r < rows; r++) bodies.forEach((b, i) => { if (b[r]){ body += '[V:' + (i + 1) + '] ' + b[r].music + '\n' + (b[r].lyric ? 'w: ' + b[r].lyric + '\n' : ''); } });
     }
