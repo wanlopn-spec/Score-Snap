@@ -198,13 +198,24 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .apibox input[type=password]{width:100%;font-family:var(--mono);background:var(--surface)}
 .apibox .rem{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--ink-2)}
 .startbox{display:grid;gap:10px}
+.ntype{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
+.ntype-l{font-size:.78rem;color:var(--ink-2);padding:0 6px}
+.ntype button{flex:1 1 120px;border:0;background:transparent;border-radius:10px;flex-direction:column;gap:2px;min-height:46px;color:var(--ink-2);font-weight:600}
+.ntype button small{font-weight:400;font-size:.72rem;opacity:.85}
+.ntype button[aria-pressed=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
+.thaipanel{display:grid;gap:10px;padding:12px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));background:var(--accent-soft)}
+.thai-h{display:grid;gap:2px}.thai-h b{font-weight:600}.thai-h span{font-size:.8rem;color:var(--ink-2)}
+.thai-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.thai-opts select{width:100%;background:var(--surface)}
+.thaipanel textarea{min-height:150px;font:15px/1.8 var(--font);background:var(--surface)}
+.thaipanel .rem{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--ink-2)}
 .start-opt{justify-content:flex-start;text-align:left;gap:12px;padding:12px 14px;min-height:62px;border-radius:var(--r)}
 .start-opt .i{width:22px;height:22px}
 .start-opt span{display:grid;gap:2px}
 .start-opt b{font-weight:600;font-size:.95rem}
 .start-opt small{font-size:.78rem;opacity:.8}
 .startbox a{color:var(--accent);font-weight:600}
-html.ai-off .card.scan>:not(.card-h):not(#startBox){display:none!important}
+html.ai-off .card.scan>:not(.card-h):not(#startBox):not(#thaiPanel){display:none!important}
 html.ai-off #fixBars{display:none}
 .read-row{display:grid;grid-template-columns:1fr auto;gap:8px}
 #readBtn{min-height:50px;font-size:1rem;border-radius:14px}
@@ -438,6 +449,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
       <div class="startbox" id="startBox" hidden>
         <button class="start-opt primary" id="startImport" type="button"><svg class="i"><use href="#i-upload"/></svg><span><b>นำเข้าไฟล์ MusicXML</b><small>จาก MuseScore, Sibelius, StaffPad (.musicxml .xml .mxl)</small></span></button>
         <button class="start-opt" id="startNew" type="button"><svg class="i"><use href="#i-code"/></svg><span><b>เริ่มเขียนโน้ตใหม่</b><small>หน้าว่าง 4/4 คีย์ C แล้วแก้ทีละตัว</small></span></button>
+        <button class="start-opt" id="startThai" type="button"><svg class="i"><use href="#i-code"/></svg><span><b>พิมพ์โน้ตไทย แปลงเป็นโน้ตสากล</b><small>ด ร ม ฟ ซ ล ท ห้องละ 4 ตัว</small></span></button>
         <button class="start-opt" id="startExample" type="button"><svg class="i"><use href="#i-undo"/></svg><span><b>เปิดเพลงตัวอย่าง</b><small>Ode to Joy สำหรับลองเล่น</small></span></button>
         <div class="status" id="startStatus" aria-live="polite"></div>
         <details class="adv" id="offlineWrap">
@@ -474,6 +486,30 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <span class="note" id="pdfRangeN"></span>
       </div>
 
+      <div class="ntype" id="nType" role="group" aria-label="ชนิดโน้ตในรูป">
+        <span class="ntype-l">ชนิดโน้ต</span>
+        <button type="button" data-type="staff" aria-pressed="true">โน้ตสากล <small>บรรทัดห้าเส้น</small></button>
+        <button type="button" data-type="thai" aria-pressed="false">โน้ตไทย <small>ด ร ม ฟ ซ ล ท</small></button>
+      </div>
+      <div class="thaipanel" id="thaiPanel" hidden>
+        <div class="thai-h"><b>โน้ตไทย → โน้ตสากล</b><span>AI อ่านตัวโน้ตไทยจากรูปลงกล่องนี้ แล้วแปลงเป็นบรรทัดห้าเส้น หรือพิมพ์โน้ตไทยเองแล้วกดแปลงก็ได้</span></div>
+        <div class="thai-opts">
+          <label class="field">1 ห้องโน้ตไทย (4 ตัว) เท่ากับ
+            <select id="thaiMeter"><option value="24">1 ห้อง 2/4 · ตัวละเขบ็ต 1 ชั้น</option><option value="44">1 ห้อง 4/4 · ตัวละตัวดำ</option></select>
+          </label>
+          <label class="field">เครื่องหมาย -
+            <select id="thaiDash"><option value="hold">ลากเสียงตัวก่อนหน้า</option><option value="rest">เงียบ (ตัวหยุด)</option></select>
+          </label>
+        </div>
+        <label class="rem"><input type="checkbox" id="thaiNames" checked> แสดงชื่อโน้ตไทยใต้โน้ตสากล</label>
+        <textarea id="thaiText" spellcheck="false" aria-label="โน้ตไทย" placeholder="ชื่อเพลง: ลาวดวงเดือน&#10;- - - ด | - ร - ม | - ซ - ล | - ซ - ม&#10;&#10;คั่นห้องด้วย | · ห้องละ 4 ตัว · ' หรือ ํ = จุดบน (สูงขึ้น) · , หรือ ฺ = จุดล่าง (ต่ำลง)"></textarea>
+        <div class="row">
+          <button id="thaiConvert" class="primary" type="button">แปลงเป็นโน้ตสากล</button>
+          <button id="thaiSample" type="button">ใส่ตัวอย่าง</button>
+        </div>
+        <div class="status" id="thaiStatus" aria-live="polite"></div>
+        <p class="note">ด ร ม ฟ ซ ล ท เทียบเป็น C D E F G A B · โน้ตไทยใช้ระบบเสียง 7 เสียงเท่า จึงเป็นค่าประมาณบนเปียโน ใช้ทรานสโพสเพื่อย้ายระดับเสียงทั้งเพลง (เช่น ทางเพียงออล่าง)</p>
+      </div>
       <label class="field" id="hint-field" for="hint">ข้อมูลช่วยอ่าน (ไม่บังคับ)
         <input id="hint" type="text" placeholder="เช่น เปียโน 2 มือ · 3/4 · G major">
       </label>
@@ -1580,6 +1616,7 @@ async function proofread(pages, hint, label){
 }
 
 async function readScore(){
+  if (noteType() === 'thai') return readThai();
   if (!sample || !files.length) return;
   readCtl = new AbortController(); lockUI(true);
   const opt = { clean: $('#optClean').checked, strips: $('#optStrips').checked, verify: $('#optVerify').checked };
@@ -2254,6 +2291,7 @@ function aiOff(){
   $('#startImport').onclick = () => $('#importXml').click();
   $('#startNew').onclick = () => { stopPlay(); tsel.value = '0'; applyAbc(BLANK, 'โน้ตใหม่'); setXStatus('เริ่มโน้ตใหม่แล้ว แตะตัวโน้ตแล้วใช้ ▲▼ เปลี่ยนเสียง หรือแก้ในข้อความ ABC', 'ok'); paper.scrollIntoView({ block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
   $('#startExample').onclick = () => $('#reset').click();
+  $('#startThai').onclick = () => { setNoteType('thai'); $('#thaiText').focus(); };
 }
 function standalone(){
   if (window.SCORESNAP_AI === false){ aiOff(); return; }
@@ -2777,6 +2815,257 @@ function setSkin(k){
 }
 document.querySelectorAll('.skin [data-skin]').forEach(b => b.addEventListener('click', () => setSkin(b.dataset.skin)));
 setSkin(document.documentElement.getAttribute('data-skin') || '');
+
+/* ---------- Thai notation (โน้ตไทย) → staff notation ---------- */
+// Text format (what the AI writes, and what people can type):
+//   ชื่อเพลง: ลาวดวงเดือน        (optional; also TITLE:)
+//   ทาง: ระนาดเอก                (optional; also PART: — each part becomes its own staff)
+//   - - - ด | - ร - ม | - ฟ - ซ    one printed row per line, ห้อง separated by |
+// Each ห้อง has 4 slots. A slot is '-' or one note, or several notes in one slot (ดร or (ดร)).
+// Note = ด ร ม ฟ ซ ล ท, then ' or ํ per dot above (octave up), , or ฺ per dot below (octave down), then # or b.
+const THAI = (() => {
+  const LETTER = { 'ด':'C', 'ร':'D', 'ม':'E', 'ฟ':'F', 'ซ':'G', 'ล':'A', 'ท':'B' };
+  const UP = new Set(["'", 'ํ', '˙', '’']), DOWN = new Set([',', 'ฺ', '̣']);
+  const TICK = 12;                         // ticks per slot (divisible by 2, 3, 4, 6)
+  function parseNotes(str){
+    const out = []; let cur = null;
+    for (const ch of str){
+      if (LETTER[ch]){ cur = { l: LETTER[ch], th: ch, oct: 0, acc: 0 }; out.push(cur); }
+      else if (!cur) continue;
+      else if (UP.has(ch)) cur.oct++;
+      else if (DOWN.has(ch)) cur.oct--;
+      else if (ch === '#' || ch === '♯') cur.acc = 1;
+      else if (ch === 'b' || ch === '♭') cur.acc = -1;
+    }
+    return out;
+  }
+  // one ห้อง segment → array of slots; a slot = 'hold' | [notes]
+  function slotsOf(seg){
+    seg = seg.trim(); if (!seg) return [];
+    const parts = /\s/.test(seg) ? seg.split(/\s+/) : null;
+    const slots = [];
+    if (parts){
+      for (const p of parts){ const t = p.replace(/[()]/g, ''); if (/^[-–—_.o0]+$/.test(t)){ for (let i = 0; i < Math.max(1, t.replace(/[^-–—_]/g,'').length || 1); i++) slots.push('hold'); } else { const n = parseNotes(t); if (n.length) slots.push(n); } }
+      return slots;
+    }
+    // no spaces: '-ด-ร', groups in ( )
+    for (let i = 0; i < seg.length; i++){
+      const ch = seg[i];
+      if ('-–—_'.includes(ch)){ slots.push('hold'); continue; }
+      if (ch === '('){ const j = seg.indexOf(')', i); const n = parseNotes(seg.slice(i+1, j < 0 ? seg.length : j)); if (n.length) slots.push(n); i = j < 0 ? seg.length : j; continue; }
+      if (LETTER[ch]){ let j = i+1; while (j < seg.length && !LETTER[seg[j]] && !'-–—_( '.includes(seg[j])) j++; slots.push(parseNotes(seg.slice(i, j))); i = j-1; }
+    }
+    return slots;
+  }
+  function parse(text){
+    const lines = String(text || '').replace(/\r/g,'').split('\n');
+    let title = ''; const parts = []; let part = null; const issues = [];
+    const newPart = name => { part = { name, rows: [] }; parts.push(part); };
+    lines.forEach((raw, li) => {
+      const line = raw.replace(/```\w*/g,'').trim();
+      if (!line) return;
+      let m;
+      if ((m = line.match(/^(?:TITLE|ชื่อเพลง)\s*[:：]\s*(.*)$/i))){ title = m[1].trim(); return; }
+      if ((m = line.match(/^(?:PART|ทาง|แนว|เครื่อง)\s*[:：]\s*(.*)$/i))){ newPart(m[1].trim()); return; }
+      if (/^(NOTE|หมายเหตุ)\s*[:：]/i.test(line)) return;
+      if (!/[ดรมฟซลท\-–—]/.test(line)) return;
+      if (!part) newPart('');
+      const segs = line.split('|').map(s => s.trim()).filter(s => s.length);
+      const bars = [];
+      segs.forEach(seg => {
+        const sl = slotsOf(seg);
+        if (!sl.length) return;
+        if (sl.length % 4 === 0){ for (let k = 0; k < sl.length; k += 4) bars.push(sl.slice(k, k+4)); }
+        else {
+          issues.push({ line: li + 1, text: seg, count: sl.length });
+          const fixed = sl.slice(0, 4); while (fixed.length < 4) fixed.push('hold');
+          bars.push(fixed);
+        }
+      });
+      if (bars.length) part.rows.push(bars);
+    });
+    return { title, parts: parts.filter(p => p.rows.length), issues };
+  }
+  const pow2 = n => { let m = 1; while (m * 2 <= n) m *= 2; return m; };
+  function pitch(n){
+    let s = (n.acc > 0 ? '^' : n.acc < 0 ? '_' : '');
+    if (n.oct >= 1) s += n.l.toLowerCase() + "'".repeat(n.oct - 1);
+    else s += n.l + ','.repeat(-n.oct);
+    return s;
+  }
+  const thaiName = n => n.th + (n.oct > 0 ? 'ํ'.repeat(n.oct) : n.oct < 0 ? 'ฺ'.repeat(-n.oct) : '') + (n.acc > 0 ? '#' : n.acc < 0 ? 'b' : '');
+  const lenStr = ticks => { const g = gcd(ticks, TICK); const n = ticks / g, d = TICK / g; return d === 1 ? (n === 1 ? '' : String(n)) : (n === 1 ? '/' + d : n + '/' + d); };
+  // one part → ABC body lines (+ lyric lines of Thai names)
+  function partToAbc(p, dashMode, names){
+    let prev = null;                             // last event so far (across bars and rows)
+    // pass 1: build events, so a hold at a bar start can mark the previous bar's note as tied
+    const rowsEv = p.rows.map(row => row.map(bar => {
+      const ev = [];                             // {kind:'n'|'r', n, t, tup, tie, cont}
+      bar.forEach(slot => {
+        const last = ev.length ? ev[ev.length-1] : null;
+        if (slot === 'hold'){
+          if (dashMode === 'rest' || (!prev && !last)){
+            if (last && last.kind === 'r' && !last.tup) last.t += TICK; else { const r = { kind:'r', t:TICK }; ev.push(r); prev = r; }
+          } else if (last && !last.tup){ last.t += TICK; }
+          else {
+            const src = last || prev;
+            if (src && src.kind === 'n'){ src.tie = true; const e = { kind:'n', n: src.n, t: TICK, cont: true }; ev.push(e); prev = e; }
+            else { const r = { kind:'r', t:TICK }; ev.push(r); prev = r; }
+          }
+        } else if (slot.length === 1){ const e = { kind:'n', n: slot[0], t: TICK }; ev.push(e); prev = e; }
+        else { const k = slot.length, m = pow2(k); slot.forEach((n, i) => { const e = { kind:'n', n, tup: { k, m, first: i === 0 } }; ev.push(e); prev = e; }); }
+      });
+      return ev;
+    }));
+    // pass 2: write ABC
+    const out = rowsEv.map(row => {
+      const syl = [];
+      const bars = row.map(ev => ev.length ? ev.map(e => {
+        let s = '';
+        if (e.tup && e.tup.first && e.tup.k !== e.tup.m) s += '(' + e.tup.k + ':' + e.tup.m + ':' + e.tup.k;
+        if (e.kind === 'r') s += 'z' + lenStr(e.t);
+        else { s += pitch(e.n) + (e.tup ? '/' + e.tup.m : lenStr(e.t)) + (e.tie ? '-' : ''); syl.push(e.cont ? '_' : thaiName(e.n)); }
+        return s;
+      }).join(' ') : 'z' + lenStr(4 * TICK));
+      return { music: bars.join(' | ') + ' |', lyric: names ? syl.join(' ') : '' };
+    });
+    if (out.length) out[out.length-1].music = out[out.length-1].music.replace(/\|$/, '|]');
+    return out;
+  }
+  function toAbc(text, opt = {}){
+    const p = parse(text);
+    if (!p.parts.length) return { abc: '', issues: p.issues, bars: 0 };
+    const four = opt.meter === '44';
+    const head = ['X:1', 'T:' + (p.title || 'เพลงไทย'), 'C:แปลงจากโน้ตไทย', four ? 'M:4/4' : 'M:2/4', four ? 'L:1/4' : 'L:1/8', four ? 'Q:1/4=80' : 'Q:1/4=72'];
+    const prog = opt.program == null ? 13 : opt.program;
+    let body = '';
+    const bodies = p.parts.map(pt => partToAbc(pt, opt.dash || 'hold', opt.names !== false));
+    if (p.parts.length === 1){
+      head.push('K:C', '%%MIDI program ' + prog);
+      bodies[0].forEach(l => { body += l.music + '\n' + (l.lyric ? 'w: ' + l.lyric + '\n' : ''); });
+    } else {
+      head.push('%%score ' + p.parts.map((_, i) => i + 1).join(' '));
+      p.parts.forEach((pt, i) => head.push('V:' + (i + 1) + ' clef=treble' + (pt.name ? ' name="' + pt.name.replace(/"/g, '') + '"' : ''), '%%MIDI program ' + prog));
+      head.push('K:C');
+      const rows = Math.max(...bodies.map(b => b.length));
+      for (let r = 0; r < rows; r++) bodies.forEach((b, i) => { if (b[r]){ body += '[V:' + (i + 1) + '] ' + b[r].music + '\n' + (b[r].lyric ? 'w: ' + b[r].lyric + '\n' : ''); } });
+    }
+    const bars = p.parts.reduce((s, pt) => s + pt.rows.reduce((a, r) => a + r.length, 0), 0);
+    return { abc: head.join('\n') + '\n' + body.trim(), issues: p.issues, bars, title: p.title };
+  }
+  return { parse, toAbc };
+})();
+
+const THAI_FORMAT = `Output format (plain text, Thai letters exactly as printed):
+ชื่อเพลง: <title if printed>
+ทาง: <part or instrument name — only when the page has several parts; write each part's rows under its own ทาง: line>
+then ONE line per printed row of the notation, reading left to right, top to bottom:
+- separate each ห้อง (measure box) with " | "
+- every ห้อง has exactly 4 slots, separated by single spaces
+- a slot is "-" (empty / held) or one note, or several notes printed squeezed into one slot written together with no space (e.g. ดร)
+- a note is one letter ด ร ม ฟ ซ ล ท, then ' for each dot ABOVE the letter (higher octave) or , for each dot BELOW (lower octave), then # or b if printed
+Example row:  - - - ด | - ร - ม | - ฟ - ซ | ดํ - ท -`;
+function thaiPrompt(imgs, hint, pageNo, pages){
+  const strips = imgs.filter(i => i.kind === 'strip').length;
+  return `You are an expert in Thai traditional music notation (โน้ตไทย / โน้ตดนตรีไทย) doing careful optical character reading.
+${pages > 1 ? `This is page ${pageNo} of ${pages}.` : ''} ${strips ? `Image 1 is the whole page; images 2-${imgs.length} are zoomed horizontal bands of it, top to bottom, with some overlap — use them to read each letter and dot exactly, but transcribe each printed row only once.` : 'The attached image is a page of Thai notation.'}
+${hint ? 'Information from the user: ' + hint + '\n' : ''}
+Thai notation writes melody with the letters ด ร ม ฟ ซ ล ท in a grid of ห้อง (usually 8 ห้อง per row); each ห้อง has 4 positions; "-" marks a position with no new note. Dots above or below a letter change its octave. Ignore chhing marks (ฉิ่ง/ฉับ), numbering and lyrics.
+Copy exactly what is printed. Count the 4 positions of every ห้อง carefully; do not invent or reorder notes.
+
+${THAI_FORMAT}
+
+Reply with the transcription inside one \`\`\`thai code fence, then one final line starting with "NOTE:" in Thai listing anything unclear (or that it read cleanly).`;
+}
+function thaiProofPrompt(cur, issues, hint){
+  return `You are proofreading a transcription of the attached Thai music notation (โน้ตไทย).${hint ? ' Information from the user: ' + hint : ''}
+Current transcription:
+\`\`\`thai
+${cur}
+\`\`\`
+${issues.length ? 'These ห้อง do not have exactly 4 slots:\n' + issues.slice(0, 30).map(i => '- line ' + i.line + ': "' + i.text + '" has ' + i.count + ' slots').join('\n') : 'Every ห้อง has 4 slots.'}
+Compare with the images row by row and ห้อง by ห้อง: fix wrong letters, missing or extra notes, wrong octave dots, and the slot counts. Keep everything that is correct unchanged.
+
+${THAI_FORMAT}
+
+Reply with ONLY the full corrected transcription in one \`\`\`thai code fence, then one final line starting with "NOTE:" in Thai listing what you changed.`;
+}
+function extractThai(text){
+  const f = text.match(/```(?:thai|text)?\s*\n([\s\S]*?)```/i);
+  const note = (text.match(/NOTE:\s*([\s\S]*)$/) || [])[1];
+  return { thai: (f ? f[1] : text.replace(/NOTE:[\s\S]*$/, '')).trim(), note: note ? note.trim() : '' };
+}
+function noteType(){ const b = document.querySelector('#nType [aria-pressed=true]'); return b ? b.dataset.type : 'staff'; }
+function thaiOpts(){ return { meter: $('#thaiMeter').value, dash: $('#thaiDash').value, names: $('#thaiNames').checked }; }
+function convertThai(text, badge){
+  const r = THAI.toAbc(text, thaiOpts());
+  const st = $('#thaiStatus');
+  if (!r.abc){ st.className = 'status err'; st.textContent = 'ไม่พบโน้ตไทยในข้อความ ตรวจว่าใช้ตัว ด ร ม ฟ ซ ล ท และคั่นห้องด้วย |'; return r; }
+  stopPlay(); tsel.value = '0';
+  applyAbc(r.abc, badge || 'แปลงจากโน้ตไทย');
+  st.className = 'status ' + (r.issues.length ? 'err' : 'ok');
+  st.textContent = 'แปลงแล้ว ' + r.bars + ' ห้อง' + (r.issues.length ? ' · มี ' + r.issues.length + ' ห้องที่ไม่ครบ 4 ตัว (เติม - ให้ครบแล้ว): ' + r.issues.slice(0, 5).map(i => 'บรรทัด ' + i.line + ' "' + i.text + '"').join(', ') : ' · ทุกห้องครบ 4 ตัว');
+  return r;
+}
+function bands(h){ const n = 3, step = h / n, over = step * 0.12; return Array.from({ length: n }, (_, i) => ({ y: Math.max(0, i * step - over), h: Math.min(h, step + 2 * over) })); }
+async function readThai(){
+  if (!sample || !files.length) return;
+  readCtl = new AbortController(); lockUI(true);
+  const opt = { clean: $('#optClean').checked, strips: false, verify: $('#optVerify').checked };
+  const hint = $('#hint').value.trim(), notes = [];
+  try{
+    setSteps(0, []); setScan(thinking('กำลังปรับภาพ…'));
+    const pages = [];
+    for (const it of files){ const p = await OMR.page(it, opt); if ($('#optStrips').checked) p.rects = bands(p.canvas.height); pages.push(p); if (readCtl.signal.aborted) throw { code:'cancelled' }; }
+    const sets = []; for (const p of pages) sets.push(await OMR.images(p, maxImages()));
+    showPrep(sets); lastPages = pages;
+    setSteps(1, [0]);
+    let thai = '';
+    for (let i = 0; i < pages.length; i++){
+      const label = pages.length > 1 ? 'กำลังอ่านโน้ตไทยหน้า ' + (i+1) + '/' + pages.length : 'กำลังอ่านโน้ตไทย';
+      setScan(thinking(label + '… (30 วินาที – 2 นาที)'));
+      const { text, truncated } = await ask(thaiPrompt(sets[i], hint, i+1, pages.length), sets[i], label);
+      const r = extractThai(text);
+      if (r.note) notes.push((pages.length > 1 ? 'หน้า ' + (i+1) + ': ' : '') + r.note);
+      if (truncated) notes.push('ผลหน้า ' + (i+1) + ' ถูกตัดก่อนจบ ลองอ่านทีละหน้า');
+      thai += (thai ? '\n' : '') + (i > 0 ? r.thai.split('\n').filter(l => !/^(TITLE|ชื่อเพลง)\s*[:：]/i.test(l)).join('\n') : r.thai);
+    }
+    setSteps(2, [0,1]);
+    let parsed = THAI.parse(thai);
+    if (opt.verify && pages.length <= maxImages()){
+      setSteps(3, [0,1,2]);
+      const imgs = pages.length === 1 ? await OMR.images(pages[0], maxImages()) : await Promise.all(pages.map(async p => (await OMR.images(p, 1))[0]));
+      setScan(thinking('กำลังตรวจทานรอบสอง…'));
+      const { text } = await ask(thaiProofPrompt(thai, parsed.issues, hint), imgs, 'กำลังตรวจทานรอบสอง');
+      const r = extractThai(text), p2 = THAI.parse(r.thai);
+      if (p2.parts.length && p2.issues.length <= parsed.issues.length){ thai = r.thai; parsed = p2; if (r.note) notes.push('รอบสอง: ' + r.note); }
+    }
+    $('#thaiText').value = thai;
+    const res = convertThai(thai, 'อ่านจากโน้ตไทย · ตรวจทานก่อนใช้');
+    setSteps(-1, [0,1,2,3].filter(i => i < 3 || opt.verify));
+    setScan('อ่านโน้ตไทยเสร็จ ' + res.bars + ' ห้อง แปลงเป็นโน้ตสากลแล้ว · แก้ตัวโน้ตไทยในกล่อง "โน้ตไทย" แล้วกดแปลงใหม่ได้' + (notes.length ? '\n' + notes.join('\n') : ''), res.issues.length ? '' : 'ok');
+    paper.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }catch(e){
+    const code = e && e.code;
+    setScan(ERR[code] || 'การเชื่อมต่อขัดข้อง ลองกด "อ่านโน้ตจากรูป" อีกครั้ง', code === 'cancelled' ? '' : 'err');
+    if (code === 'not_granted' || code === 'sampling_disabled') sample = null;
+  }finally{ readCtl = null; lockUI(false); runBarCheck(); }
+}
+const THAI_SAMPLE = `ชื่อเพลง: ตัวอย่างโน้ตไทย
+- - - ด | - ร - ม | - ซ - ล | - ซ - ม
+- - - ร | - ม - ซ | - ล - ดํ | - ล - ซ
+- - - ม | - ซ - ล | ดํ ล ซ ม | - ร - ด`;
+function setNoteType(t){
+  document.querySelectorAll('#nType [data-type]').forEach(b => b.setAttribute('aria-pressed', b.dataset.type === t ? 'true' : 'false'));
+  $('#thaiPanel').hidden = t !== 'thai';
+  $('#hint').placeholder = t === 'thai' ? 'เช่น ทางระนาดเอก · เพลงสองชั้น · มี 2 แนว' : 'เช่น เปียโน 2 มือ · 3/4 · G major';
+  store.set('scoresnap.ntype', t);
+}
+document.querySelectorAll('#nType [data-type]').forEach(b => b.addEventListener('click', () => setNoteType(b.dataset.type)));
+$('#thaiConvert').addEventListener('click', () => convertThai($('#thaiText').value));
+$('#thaiSample').addEventListener('click', () => { $('#thaiText').value = THAI_SAMPLE; convertThai(THAI_SAMPLE); });
+['#thaiMeter', '#thaiDash', '#thaiNames'].forEach(id => $(id).addEventListener('change', () => { if ($('#thaiText').value.trim()) convertThai($('#thaiText').value); }));
+setNoteType(store.get('scoresnap.ntype') === 'thai' ? 'thai' : 'staff');
 
 
 /* ---------- installable app (PWA): service worker, install prompt, offline sounds ---------- */
