@@ -1,5 +1,5 @@
 /* Score Snap service worker: app shell precache + sound files cached on first use */
-const CORE = 'scoresnap-core-d9536747', SF = 'scoresnap-sf-v1';
+const CORE = 'scoresnap-core-519cf07b', SF = 'scoresnap-sf-v1';
 const FILES = ["./", "index.html", "fonts.css", "lib/abcjs-basic-min.js", "lib/pdf.min.js", "lib/pdf.worker.min.js", "manifest.webmanifest", "config.js", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon.png", "sf/000.mp3", "fonts/anuphan-latin-400-normal.woff2", "fonts/anuphan-latin-500-normal.woff2", "fonts/anuphan-latin-600-normal.woff2", "fonts/anuphan-latin-700-normal.woff2", "fonts/anuphan-thai-400-normal.woff2", "fonts/anuphan-thai-500-normal.woff2", "fonts/anuphan-thai-600-normal.woff2", "fonts/anuphan-thai-700-normal.woff2", "fonts/ibm-plex-mono-latin-400-normal.woff2", "fonts/ibm-plex-mono-latin-500-normal.woff2"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CORE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('scoresnap-core-') && k !== CORE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

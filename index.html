@@ -247,6 +247,17 @@ html.ai-off #fixBars{display:none}
 .tb-tune{display:flex;align-items:center;gap:8px;font-size:.84rem;font-weight:600;flex-wrap:wrap}
 .tb-tune span{font-weight:400;color:var(--ink-2);font-size:.78rem}
 .thaiband .note{margin:0}
+.tb-rec{border-top:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));padding-top:8px}
+.tb-rec>summary{cursor:pointer;font-weight:600;font-size:.86rem}
+.tb-rec .meta{color:var(--accent);font-weight:600;font-size:.78rem}
+.rec-body{display:grid;gap:8px;margin-top:8px}
+.rec-body .field{max-width:320px}
+#recMic[aria-pressed=true]{background:#DC2626;color:#fff;border-color:transparent}
+.rec-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rec-list li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:.82rem}
+.rec-list .nm{flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-list select{min-height:32px;background:var(--surface)}
+.rec-list button{min-height:32px;padding:0 10px}
 .voices{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 320px;min-width:0}
 .voices label{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2);min-width:0;flex:1 1 200px}
 .voices select{width:100%;background:var(--surface)}
@@ -643,7 +654,20 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
           <span class="tb-h">วงดนตรีไทย</span>
           <div class="tb-chips"><button type="button" class="chip" data-band="piphat" aria-pressed="false">วงปี่พาทย์</button><button type="button" class="chip" data-band="saichai" aria-pressed="false">วงเครื่องสาย</button><button type="button" class="chip" data-band="mahori" aria-pressed="false">วงมโหรี</button><button type="button" class="chip" data-band="isan" aria-pressed="false">วงพื้นบ้านอีสาน</button></div>
           <label class="tb-tune"><input type="checkbox" id="thaiTune"> เสียงแบบไทย 7 เสียงเท่า <span>(ปรับระดับเสียงให้ตรงระบบเสียงไทย)</span></label>
-          <p class="note">เลือกวงเพื่อใส่เครื่องดนตรีให้ทุกแนวพร้อมกัน หรือเลือกทีละแนวในช่องด้านล่าง (กลุ่ม Thai instruments) · เสียงเป็นเสียงใกล้เคียงจากชุดเสียงมาตรฐาน</p>
+          <p class="note">เลือกวงเพื่อใส่เครื่องดนตรีให้ทุกแนวพร้อมกัน หรือเลือกทีละแนวในช่องด้านล่าง (กลุ่ม Thai instruments) · เสียงเครื่องไทยสังเคราะห์ขึ้นเลียนแบบเครื่องจริง (ระนาด ฆ้อง ขิม จะเข้ ซอ ขลุ่ย ปี่ แคน) และจะใช้เสียงที่คุณอัดเองแทนเมื่อมี</p>
+          <details class="tb-rec" id="thaiRec">
+            <summary>ใช้เสียงเครื่องดนตรีจริงที่อัดเอง <span class="meta" id="recSum"></span></summary>
+            <div class="rec-body">
+              <label class="field">เครื่องดนตรี <select id="recInst"></select></label>
+              <div class="row">
+                <label class="btn">เลือกไฟล์เสียง<input id="recFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.ogg,.flac" multiple></label>
+                <button type="button" id="recMic" aria-pressed="false">อัดเสียงจากไมค์</button>
+              </div>
+              <div class="status" id="recStatus" aria-live="polite"></div>
+              <ul class="rec-list" id="recList"></ul>
+              <p class="note">อัดทีละ 1 เสียง ยาว 1–3 วินาที ในห้องเงียบ แอปจะตรวจหาว่าเป็นโน้ตตัวใด (แก้ได้) · ยิ่งอัดหลายเสียงทั่วช่วงเสียงของเครื่อง (เช่น ทุก 3–4 เสียง) ยิ่งสมจริง · เสียงเก็บไว้ในเครื่องนี้เท่านั้น ไม่ถูกส่งออกไปที่ใด</p>
+            </div>
+          </details>
         </div>
         <div class="voices" id="voices"></div>
         <label class="tp">ทรานสโพส <select id="transpose"></select></label>
@@ -984,6 +1008,210 @@ function synthNote(dest, midi, t, dur, vel){
   g.gain.exponentialRampToValueAtTime(v*.25,t+Math.max(.26,dur));
   g.gain.exponentialRampToValueAtTime(.0001,t+dur+.35);
 }
+/* ---------- Thai instrument sounds: modeled (synthesized in the browser) + the user's own recordings ---------- */
+const THAI_SND = (() => {
+  // struck / plucked instruments are rendered once per semitone into a buffer; modes = [ratio, amp, decay s]
+  const PERC = {
+    'ranat-ek':   { type: 'modal', modes: [[1, 1, .5], [2.76, .34, .13], [5.4, .13, .05], [8.93, .05, .02]], hit: [.45, 3400, .010], body: [.22, 330, .22], wood: 1, len: 1.5 },
+    'ranat-thum': { type: 'modal', modes: [[1, 1, 1.05], [2.76, .17, .28], [5.4, .04, .08]], hit: [.14, 1300, .016], body: [.3, 170, .35], wood: 1, len: 2 },
+    'pong-lang':  { type: 'modal', modes: [[1, 1, .42], [3.05, .24, .11], [6.1, .07, .04]], hit: [.3, 1900, .010], body: [.25, 260, .2], wood: 1, len: 1.2 },
+    'khong-yai':  { type: 'modal', modes: [[1, 1, 2.7], [1.0035, .5, 2.4], [2.28, .2, 1.1], [2.94, .13, .8], [4.18, .06, .45], [5.62, .03, .25]], hit: [.06, 800, .02], len: 3.4, soft: .006 },
+    'khong-lek':  { type: 'modal', modes: [[1, 1, 1.9], [1.0042, .45, 1.7], [2.32, .24, .8], [3.02, .14, .5], [4.33, .07, .3]], hit: [.07, 1400, .015], len: 2.6, soft: .004 },
+    'ching':      { type: 'modal', modes: [[1, 1, 1.5], [1.47, .62, 1.2], [2.09, .5, .95], [2.9, .36, .7], [3.97, .25, .5], [5.31, .16, .35]], hit: [.35, 6500, .005], len: 2.2, shift: 24 },
+    'khim':       { type: 'string', n: 12, pos: .12, dec: 2.6, courses: [0, 3.5, -3], hit: [.16, 2600, .007], len: 3 },
+    'jakhe':      { type: 'ks', loss: .9975, bright: .88, buzz: 2.6, mix: .45, len: 2.6 },
+    'phin':       { type: 'ks', loss: .995, bright: .72, buzz: 1.6, mix: .25, len: 2 },
+    'sueng':      { type: 'ks', loss: .994, bright: .55, buzz: 1.2, mix: .12, len: 1.8 },
+  };
+  // bowed / blown instruments are synthesized live per note (vibrato, breath, formants)
+  const SUS = {
+    'saw-duang':   { wave: 'sawtooth', peaks: [[1250, 4, 9], [2750, 3, 6]], hp: 300, lp: 4600, vib: [5.8, 24, .16], scoop: -35, att: .06, breath: .035, g: .30 },
+    'saw-u':       { wave: 'sawtooth', peaks: [[620, 3, 9], [1450, 2.5, 4]], hp: 110, lp: 2300, vib: [5.2, 20, .2], scoop: -30, att: .09, breath: .03, g: .38 },
+    'saw-sam-sai': { wave: 'sawtooth', peaks: [[880, 3, 7], [2250, 3, 4]], hp: 150, lp: 3400, vib: [5.4, 18, .16], scoop: -25, att: .08, breath: .025, g: .32 },
+    'khlui':       { wave: 'sine', harm: [[2, .2], [3, .07], [4, .03]], hp: 180, lp: 6000, vib: [5, 14, .22], scoop: -20, att: .045, breath: .16, bp: 2.2, g: .42 },
+    'khlui-lip':   { wave: 'sine', harm: [[2, .13], [3, .05]], hp: 400, lp: 8000, vib: [5.6, 12, .2], scoop: -15, att: .035, breath: .12, bp: 2.6, g: .34 },
+    'pi-nai':      { wave: 'square', peaks: [[1100, 3, 10], [2900, 4, 7]], hp: 380, lp: 5200, vib: [6, 30, .1], scoop: -45, att: .035, breath: .03, drive: 2.4, g: .55 },
+    'khaen':       { wave: 'sawtooth', peaks: [[780, 2, 5], [2150, 3, 4]], hp: 160, lp: 2700, vib: [0, 0, 0], att: .05, breath: .05, detune: 7, g: .24 },
+  };
+  const has = k => !!(PERC[k] || SUS[k] || (user[k] && user[k].length));
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const cache = {};
+  let noiseBuf = null;
+  function noise(c){
+    if (noiseBuf && noiseBuf.sampleRate === c.sampleRate) return noiseBuf;
+    noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate); const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+  }
+  // damped resonator bank: fast and exact
+  function addMode(out, sr, f, amp, tau, start = 0){
+    if (f >= sr * .45 || amp <= 0) return;
+    const w = 2 * Math.PI * f / sr, r = Math.exp(-1 / (tau * sr)), k = 2 * r * Math.cos(w), r2 = r * r;
+    let y1 = amp * Math.sin(w), y2 = 0;
+    const end = Math.min(out.length, start + Math.ceil(tau * sr * 7));
+    for (let i = start; i < end; i++){ out[i] += y1; const y = k * y1 - r2 * y2; y2 = y1; y1 = y; }
+  }
+  function addHit(out, sr, [amp, fc, tau]){
+    // a short band-limited noise burst = the mallet / hammer / plectrum
+    const n = Math.min(out.length, Math.ceil(tau * sr * 6)), w = 2 * Math.PI * fc / sr, q = .7, r = Math.exp(-w / (2 * q)), k = 2 * r * Math.cos(w);
+    let y1 = 0, y2 = 0;
+    for (let i = 0; i < n; i++){ const x = (Math.random() * 2 - 1) * Math.exp(-i / (tau * sr)); const y = x + k * y1 - r * r * y2; y2 = y1; y1 = y; out[i] += y * amp * (1 - r); }
+  }
+  function render(c, key, semi){
+    const id = key + '|' + semi + '|' + c.sampleRate; if (cache[id]) return cache[id];
+    const P = PERC[key], sr = c.sampleRate, m = semi + (P.shift || 0), f = hz(m);
+    const len = Math.ceil(sr * P.len * Math.min(1.3, Math.max(.45, Math.pow(f / 440, -.3))));
+    const out = new Float32Array(len);
+    if (P.type === 'modal'){
+      const sc = P.wood ? Math.pow(f / 440, -.45) : Math.pow(f / 440, -.25);
+      P.modes.forEach(([ra, a, d]) => addMode(out, sr, f * ra, a, Math.max(.02, d * sc)));
+      if (P.body) addMode(out, sr, P.body[1], P.body[0] * .5, P.body[2]);
+      if (P.hit) addHit(out, sr, P.hit);
+    } else if (P.type === 'string'){
+      const sc = Math.pow(f / 440, -.3);
+      for (const cents of P.courses){
+        const fc = f * Math.pow(2, cents / 1200);
+        for (let n = 1; n <= P.n; n++){
+          const a = Math.abs(Math.sin(n * Math.PI * P.pos)) / Math.pow(n, .9);
+          addMode(out, sr, fc * n * Math.sqrt(1 + .00012 * n * n), a / P.courses.length, P.dec * sc / (1 + .3 * (n - 1)));
+        }
+      }
+      addHit(out, sr, P.hit);
+    } else {                                           // Karplus–Strong pluck with a fractional delay and a buzzing bridge
+      const D = sr / f - .5, N = Math.floor(D), frac = D - N, C = (1 - frac) / (1 + frac);
+      const line = new Float32Array(N + 2); let lp = 0;
+      for (let i = 0; i < line.length; i++){ const x = Math.random() * 2 - 1; lp += (x - lp) * P.bright; line[i] = lp; }
+      let idx = 0, prev = 0, apx = 0, apy = 0;
+      const loss = Math.pow(P.loss, 440 / Math.max(110, f) * .6);
+      for (let i = 0; i < len; i++){
+        const cur = line[idx];
+        const avg = P.bright * cur + (1 - P.bright) * prev; prev = cur;
+        const ap = C * (avg - apy) + apx; apx = avg; apy = ap;   // first-order allpass = fractional delay
+        line[idx] = ap * loss; idx = (idx + 1) % N;
+        out[i] = cur;
+      }
+      if (P.buzz){ const t = Math.tanh(P.buzz); for (let i = 0; i < len; i++){ const x = out[i]; out[i] = x * (1 - P.mix) + P.mix * Math.tanh(P.buzz * x) / t; } }
+    }
+    // soft attack, normalize, fade the tail
+    const att = Math.round(sr * (P.soft || .0015)); for (let i = 0; i < att && i < len; i++) out[i] *= i / att;
+    let pk = 0; for (let i = 0; i < len; i++) pk = Math.max(pk, Math.abs(out[i]));
+    const g = pk ? .8 / pk : 0, fade = Math.round(sr * .08);
+    for (let i = 0; i < len; i++) out[i] *= g * (i > len - fade ? (len - i) / fade : 1);
+    const b = c.createBuffer(1, len, sr); b.getChannelData(0).set(out);
+    return (cache[id] = b);
+  }
+  const vel = v => Math.pow(Math.min(1, (v || 90) / 127), 1.4);
+  function playPerc(c, dest, key, midi, t, dur, v){
+    const semi = Math.round(midi), b = render(c, key, semi);
+    const s = c.createBufferSource(), g = c.createGain();
+    s.buffer = b; s.playbackRate.value = Math.pow(2, (midi - semi) / 12);
+    g.gain.value = vel(v) * .9; s.connect(g).connect(dest); s.start(t);
+    // a struck note rings on until the next stroke would damp it; cap at the buffer
+    const end = Math.min(t + b.duration, t + Math.max(dur, .25) + (key.startsWith('khong') || key === 'khim' || key === 'ching' ? 1.6 : .5));
+    g.gain.setValueAtTime(vel(v) * .9, end - .06); g.gain.linearRampToValueAtTime(0, end); s.stop(end + .02);
+  }
+  function playSus(c, dest, key, midi, t, dur, v){
+    const S = SUS[key], f = hz(midi), A = vel(v) * S.g, end = t + Math.max(.08, dur);
+    const amp = c.createGain(); amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(A, t + S.att);
+    amp.gain.setTargetAtTime(A * .85, t + S.att, .25); amp.gain.setTargetAtTime(0, end, .05);
+    let node = amp;
+    if (S.drive){ const ws = c.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++){ const x = i / 511.5 - 1; cv[i] = Math.tanh(S.drive * x) / Math.tanh(S.drive); } ws.curve = cv; ws.connect(amp); node = ws; }
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = S.lp; lp.Q.value = .5; lp.connect(node);
+    let head = lp;
+    (S.peaks || []).forEach(([fr, q, gain]) => { const pf = c.createBiquadFilter(); pf.type = 'peaking'; pf.frequency.value = fr; pf.Q.value = q; pf.gain.value = gain; pf.connect(head); head = pf; });
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = S.hp; hp.connect(head);
+    // vibrato after a short delay, plus a slight scoop into the note (Thai ornament style)
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = S.vib[0] || 5;
+    lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(0, t + S.vib[2]); lg.gain.linearRampToValueAtTime(S.vib[1], t + S.vib[2] + .25);
+    lfo.connect(lg); lfo.start(t); lfo.stop(end + .4);
+    const oscs = [];
+    const mk = (mult, gain, det) => {
+      const o = c.createOscillator(), og = c.createGain(); o.type = S.wave; o.frequency.value = f * mult; og.gain.value = gain;
+      o.detune.setValueAtTime((S.scoop || 0) + (det || 0), t); o.detune.linearRampToValueAtTime(det || 0, t + .07);
+      lg.connect(o.detune); o.connect(og).connect(hp); o.start(t); o.stop(end + .4); oscs.push(o);
+    };
+    mk(1, 1, 0);
+    (S.harm || []).forEach(([m, g]) => mk(m, g, 0));
+    if (S.detune) mk(1, .6, S.detune);
+    if (S.breath){
+      const ns = c.createBufferSource(), bp = c.createBiquadFilter(), ng = c.createGain();
+      ns.buffer = noise(c); ns.loop = true; ns.loopStart = Math.random(); bp.type = 'bandpass'; bp.frequency.value = Math.min(9000, f * (S.bp || 3)); bp.Q.value = 1.2;
+      ng.gain.value = S.breath * 3; ns.connect(bp).connect(ng).connect(amp); ns.start(t, Math.random()); ns.stop(end + .4);
+    }
+    amp.connect(dest);
+  }
+  /* ---- the user's own recordings: kept in IndexedDB on this device ---- */
+  const user = {};                                     // key -> [{id, midi, name, buf}]
+  function playUser(c, dest, key, midi, t, dur, v){
+    const list = user[key]; let s = list[0];
+    for (const x of list) if (Math.abs(x.midi - midi) < Math.abs(s.midi - midi)) s = x;
+    const src = c.createBufferSource(), g = c.createGain(), rate = Math.pow(2, (midi - s.midi) / 12);
+    src.buffer = s.buf; src.playbackRate.value = rate; src.connect(g).connect(dest);
+    const A = vel(v) * .95, nat = s.buf.duration / rate, sustained = !!SUS[key] || key === 'khap-rong';
+    const end = Math.min(t + nat, sustained ? t + Math.max(.1, dur) + .08 : t + Math.max(dur, .25) + 1.2);
+    g.gain.setValueAtTime(A, t); g.gain.setValueAtTime(A, Math.max(t, end - .08)); g.gain.linearRampToValueAtTime(0, end);
+    src.start(t); src.stop(end + .02);
+  }
+  function play(c, dest, key, midi, t, dur, v){
+    if (user[key] && user[key].length) return playUser(c, dest, key, midi, t, dur, v);
+    if (PERC[key]) return playPerc(c, dest, key, midi, t, dur, v);
+    if (SUS[key]) return playSus(c, dest, key, midi, t, dur, v);
+  }
+  function prepare(c, notes){ for (const [key, midi] of notes) if (PERC[key] && !(user[key] && user[key].length)) render(c, key, Math.round(midi)); }
+  // pitch detection (YIN) for a recorded note → MIDI number
+  function detect(buf){
+    const sr = buf.sampleRate, d = buf.getChannelData(0);
+    let on = 0, pk = 0; for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
+    while (on < d.length && Math.abs(d[on]) < pk * .25) on++;
+    const W = Math.min(4096, Math.floor(sr * .09)), st = Math.min(d.length - 2 * W - 1, on + Math.floor(sr * .04));
+    if (st < 0) return null;
+    const minL = Math.floor(sr / 2200), maxL = Math.min(W - 1, Math.floor(sr / 45)), df = new Float32Array(maxL + 1);
+    for (let L = 1; L <= maxL; L++){ let s = 0; for (let i = 0; i < W; i++){ const x = d[st + i] - d[st + i + L]; s += x * x; } df[L] = s; }
+    let run = 0, best = -1;
+    for (let L = 1; L <= maxL; L++){ run += df[L]; df[L] = df[L] * L / (run || 1); }
+    for (let L = minL; L <= maxL; L++) if (df[L] < .15){ while (L + 1 <= maxL && df[L + 1] < df[L]) L++; best = L; break; }
+    if (best < 0){ let mn = Infinity; for (let L = minL; L <= maxL; L++) if (df[L] < mn){ mn = df[L]; best = L; } if (mn > .45) return null; }
+    const a = df[best - 1] ?? df[best], b = df[best], cc = df[best + 1] ?? df[best], den = a - 2 * b + cc;
+    const L = best + (den ? (a - cc) / (2 * den) : 0);
+    return 69 + 12 * Math.log2(sr / L / 440);
+  }
+  // mono, start at the attack, cap at 6 s, normalize, short fades
+  function tidy(c, raw){
+    const sr = raw.sampleRate, n = raw.length, mono = new Float32Array(n);
+    for (let ch = 0; ch < raw.numberOfChannels; ch++){ const d = raw.getChannelData(ch); for (let i = 0; i < n; i++) mono[i] += d[i] / raw.numberOfChannels; }
+    let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(mono[i]));
+    if (pk < 1e-4) throw new Error('silent');
+    let on = 0; while (on < n && Math.abs(mono[on]) < pk * .08) on++;
+    on = Math.max(0, on - Math.round(sr * .004));
+    let endI = n; const tail = pk * .004; while (endI > on + sr * .1 && Math.abs(mono[endI - 1]) < tail) endI--;
+    const len = Math.min(endI - on, sr * 6), b = c.createBuffer(1, len, sr), o = b.getChannelData(0), g = .85 / pk, fo = Math.round(sr * .03);
+    for (let i = 0; i < len; i++) o[i] = mono[on + i] * g * Math.min(1, i / 32) * (i > len - fo ? (len - i) / fo : 1);
+    return b;
+  }
+  const DB = 'scoresnap-samples';
+  function idb(){ return new Promise((res, rej) => { try{ const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore('s', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }catch(e){ rej(e); } }); }
+  async function dbDo(mode, fn){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('s', mode), st = tx.objectStore('s'); const r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }); }
+  async function add(c, key, data, name, midi){
+    const raw = await c.decodeAudioData(data.slice(0));
+    const buf = tidy(c, raw), m = midi != null ? midi : detect(buf);
+    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), key, name, midi: m == null ? 60 : Math.round(m), data };
+    (user[key] = user[key] || []).push({ id: rec.id, midi: rec.midi, name, buf, detected: m });
+    try{ await dbDo('readwrite', st => st.put(rec)); rec.saved = true; }catch(e){ rec.saved = false; }
+    return { ...rec, detected: m };
+  }
+  async function load(c){
+    let all = []; try{ all = await dbDo('readonly', st => st.getAll()) || []; }catch(e){ return 0; }
+    for (const r of all){ try{ const buf = tidy(c, await c.decodeAudioData(r.data.slice(0))); (user[r.key] = user[r.key] || []).push({ id: r.id, midi: r.midi, name: r.name, buf }); }catch(e){} }
+    return all.length;
+  }
+  async function remove(key, id){ user[key] = (user[key] || []).filter(x => x.id !== id); try{ await dbDo('readwrite', st => st.delete(id)); }catch(e){} }
+  async function setMidi(key, id, midi){
+    const x = (user[key] || []).find(x => x.id === id); if (x) x.midi = midi;
+    try{ const db = await idb(); const tx = db.transaction('s', 'readwrite'), st = tx.objectStore('s'), g = st.get(id); g.onsuccess = () => { if (g.result){ g.result.midi = midi; st.put(g.result); } }; }catch(e){}
+  }
+  return { has, play, prepare, add, load, remove, setMidi, user, PERC, SUS, detect };
+})();
+
 /* ---------- Mix console: per-voice fader, pan, reverb/delay sends, mute, solo + FX returns + master ---------- */
 const MIX_DEF = () => ({ master: 80, tracks: {}, fx: { rev: { size: 'hall', ret: 80 }, dly: { time: '8', fb: 35, ret: 70 } } });
 const mix = MIX_DEF();
@@ -1069,8 +1297,10 @@ function tuned(m){
   const rel = ((m - tet7) % 12 + 12) % 12, d = TET_DEG[rel];
   return d == null ? m : m + (d * 12 / 7 - rel);
 }
+let thaiTrack = {};                                  // track -> Thai instrument key
 function note(dest, bufs, ev, t, dur){
-  const p = ev.instrument||0, b = bufs[p], m = tuned(ev.pitch);
+  const p = ev.instrument||0, b = bufs[p], m = tuned(ev.pitch), tk = thaiTrack[ev.track || 0];
+  if (tk && THAI_SND.has(tk)){ THAI_SND.play(ctx, dest, tk, m, t, dur, ev.volume); return; }
   if (b) sampleNote(dest, b, p, m, t, dur, ev.volume); else synthNote(dest, m, t, dur, ev.volume);
 }
 /* level meters */
@@ -1270,6 +1500,7 @@ function thaiOf(track, prog){
 }
 function drawVoiceRows(){
   trackInfo.forEach(ti => { ti.thai = thaiOf(ti.track, ti.prog); });
+  thaiTrack = Object.fromEntries(trackInfo.filter(t => t.thai).map(t => [t.track, t.thai]));
   drawThaiBand();
   drawMixer();
   const box = $('#voices'), ids = voiceIds();
@@ -1332,7 +1563,15 @@ function setProgram(track, p, thai){
   ta.value = lines.join('\n'); sel = null;
   if (isExample) setBadge('แก้ไขแล้ว', false);
   render(); updateSelLabel();
-  audio(); loadAll([p]).then(b => { if (!b[p] || !ctx || ctx.state!=='running') return; const g=ctx.createGain(); g.connect(ctx.destination); [0,4,7,12].forEach((d,i)=>sampleNote(g,b[p],p,tuned(60+d),ctx.currentTime+.05+i*.2,.35,95)); });
+  previewInst(p, thai);
+}
+function previewInst(p, thai){
+  const c = audio(); if (!c) return;
+  if (thai && THAI_SND.has(thai)){
+    ready().then(r => { if (!r) return; const g = c.createGain(); g.gain.value = volGain(mix.master); g.connect(c.destination); [0,2,4,7,9,12].forEach((d,i) => THAI_SND.play(c, g, thai, tuned(67+d - (THAI_SND.SUS[thai] ? 7 : 0)), c.currentTime+.08+i*.22, .2, 96)); });
+    return;
+  }
+  loadAll([p]).then(b => { if (!b[p] || !ctx || ctx.state!=='running') return; const g=ctx.createGain(); g.connect(ctx.destination); [0,4,7,12].forEach((d,i)=>sampleNote(g,b[p],p,tuned(60+d),ctx.currentTime+.05+i*.2,.35,95)); });
 }
 function setBand(key){
   const list = (THAI_BANDS.find(x => x[0] === key) || [])[2]; if (!list) return;
@@ -1353,6 +1592,69 @@ function setThaiTuning(on){
 }
 document.querySelectorAll('#thaiBand [data-band]').forEach(b => b.addEventListener('click', () => setBand(b.dataset.band)));
 $('#thaiTune').addEventListener('change', e => setThaiTuning(e.target.checked));
+/* own recordings */
+const TH_NOTE = ['ด', 'ด#', 'ร', 'ร#', 'ม', 'ฟ', 'ฟ#', 'ซ', 'ซ#', 'ล', 'ล#', 'ท'], WE_NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const noteName = m => TH_NOTE[m % 12] + ' · ' + WE_NOTE[m % 12] + (Math.floor(m / 12) - 1);
+let recCtx = null;
+const recC = () => (recCtx = recCtx || (window.OfflineAudioContext ? new OfflineAudioContext(1, 1, 48000) : null));
+(() => {
+  const si = $('#recInst');
+  THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = x.key; o.textContent = x.en + ' · ' + x.th; si.append(o); });
+  si.addEventListener('change', drawRecList);
+  $('#thaiRec').addEventListener('toggle', () => { if ($('#thaiRec').open){ const used = trackInfo.find(t => t.thai); if (used && !(THAI_SND.user[si.value] || []).length) si.value = used.thai; drawRecList(); } });
+  const c = recC(); if (c) THAI_SND.load(c).then(n => { if (n) drawRecList(); }).catch(() => {});
+})();
+function drawRecList(){
+  const key = $('#recInst').value, ul = $('#recList'), list = THAI_SND.user[key] || [];
+  ul.textContent = '';
+  [...list].sort((a, b) => a.midi - b.midi).forEach(x => {
+    const li = document.createElement('li'), nm = document.createElement('span'), sel = document.createElement('select'), pl = document.createElement('button'), del = document.createElement('button');
+    nm.className = 'nm'; nm.textContent = x.name; nm.title = x.name;
+    for (let m = 36; m <= 96; m++){ const o = document.createElement('option'); o.value = m; o.textContent = noteName(m); sel.append(o); }
+    sel.value = x.midi; sel.setAttribute('aria-label', 'โน้ตของเสียงนี้');
+    sel.onchange = () => { THAI_SND.setMidi(key, x.id, +sel.value); };
+    pl.type = del.type = 'button'; pl.textContent = '▶ ฟัง'; del.textContent = 'ลบ'; del.setAttribute('aria-label', 'ลบ ' + x.name);
+    pl.onclick = () => { const ac = audio(); if (!ac) return; ready().then(r => { if (!r) return; const g = ac.createGain(); g.connect(ac.destination); THAI_SND.play(ac, g, key, x.midi, ac.currentTime + .05, 1.2, 100); }); };
+    del.onclick = async () => { await THAI_SND.remove(key, x.id); drawRecList(); };
+    li.append(nm, sel, pl, del); ul.append(li);
+  });
+  const total = Object.values(THAI_SND.user).reduce((s, l) => s + l.length, 0);
+  $('#recSum').textContent = total ? '· ' + total + ' เสียง' : '';
+}
+async function addRecording(data, name){
+  const key = $('#recInst').value, st = $('#recStatus'), c = recC();
+  if (!c){ st.className = 'status err'; st.textContent = 'เบราว์เซอร์นี้เปิดไฟล์เสียงไม่ได้'; return; }
+  const fromName = (name.match(/(^|[^A-Za-z])([A-G])(#|s|b)?(-?\d)(?![\d])/) || null);
+  let midi = null;
+  if (fromName){ const pc = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[fromName[2]] + (fromName[3] === '#' || fromName[3] === 's' ? 1 : fromName[3] === 'b' ? -1 : 0); midi = (+fromName[4] + 1) * 12 + pc; }
+  try{
+    const r = await THAI_SND.add(c, key, data, name, midi);
+    const how = midi != null ? 'จากชื่อไฟล์' : r.detected != null ? 'ตรวจพบ' : 'ตรวจหาโน้ตไม่ได้ ตั้งเป็น';
+    st.className = 'status ok'; st.textContent = 'เพิ่ม "' + name + '" ให้ ' + THAI_BY[key].th + ' แล้ว · ' + how + ' ' + noteName(r.midi) + (r.saved ? '' : ' · บันทึกถาวรไม่ได้ในเบราว์เซอร์นี้ ใช้ได้จนกว่าจะปิดหน้า');
+    drawRecList();
+  }catch(e){ st.className = 'status err'; st.textContent = 'เปิด "' + name + '" ไม่ได้ ใช้ไฟล์ .wav .mp3 หรือ .m4a ที่มีเสียง'; }
+}
+$('#recFile').addEventListener('change', async e => { for (const f of [...e.target.files]) await addRecording(await f.arrayBuffer(), f.name); e.target.value = ''; });
+let recMedia = null;
+$('#recMic').addEventListener('click', async () => {
+  const b = $('#recMic'), st = $('#recStatus');
+  if (recMedia){ recMedia.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder){ st.className = 'status err'; st.textContent = 'อัดเสียงในหน้านี้ไม่ได้ ใช้ "เลือกไฟล์เสียง" แทน (อัดด้วยแอปอัดเสียงของมือถือก่อนก็ได้)'; return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch(e){ st.className = 'status err'; st.textContent = 'ใช้ไมค์ไม่ได้ (ไม่ได้รับอนุญาต หรือหน้านี้ไม่รองรับ) · เปิดแอปจากเว็บ GitHub หรือใช้ "เลือกไฟล์เสียง" แทน'; return; }
+  const chunks = []; recMedia = new MediaRecorder(stream);
+  recMedia.ondataavailable = ev => { if (ev.data.size) chunks.push(ev.data); };
+  recMedia.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); recMedia = null; b.setAttribute('aria-pressed', 'false'); b.textContent = 'อัดเสียงจากไมค์';
+    const blob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : 'audio/webm' });
+    const d = new Date(), stamp = String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + String(d.getSeconds()).padStart(2, '0');
+    await addRecording(await blob.arrayBuffer(), 'อัดเสียง ' + stamp);
+  };
+  recMedia.start(); b.setAttribute('aria-pressed', 'true'); b.textContent = '■ หยุดอัด';
+  st.className = 'status'; st.textContent = 'กำลังอัด… ดีดหรือตีเครื่องดนตรี 1 เสียง แล้วกดหยุด';
+  setTimeout(() => { if (recMedia && recMedia.state === 'recording') recMedia.stop(); }, 8000);
+});
 
 let progRAF = 0;
 const fmtTime = s => { s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
@@ -1403,7 +1705,8 @@ async function play(from = cue, to = null){
   const tok = ++playToken;
   $('#play').setAttribute('aria-label','หยุดชั่วคราว'); $('#play').dataset.on='1';
   const c = await ready(); if (!c || tok!==playToken){ if (tok===playToken) stopPlay(); return; }
-  const bufs = await loadAll([...new Set(events.map(e=>e.instrument||0))]);
+  const bufs = await loadAll([...new Set(events.filter(e => !THAI_SND.has(thaiTrack[e.track || 0])).map(e=>e.instrument||0))]);
+  THAI_SND.prepare(c, events.filter(e => thaiTrack[e.track || 0]).map(e => [thaiTrack[e.track || 0], tuned(e.pitch)]));
   if (tok !== playToken) return;
   master = c.createGain(); master.gain.value = volGain(mix.master); mixNodes = {};
   const comp = c.createDynamicsCompressor(); master.connect(comp).connect(c.destination);
