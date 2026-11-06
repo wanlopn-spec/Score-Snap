@@ -244,6 +244,31 @@ html.ai-off #fixBars{display:none}
 .voices{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 320px;min-width:0}
 .voices label{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2);min-width:0;flex:1 1 200px}
 .voices select{width:100%;background:var(--surface)}
+.mixbox{width:100%;border-top:1px solid var(--line);padding-top:10px}
+.mixbox>summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:.9rem}
+.mixbox>summary::-webkit-details-marker{display:none}
+.mixbox>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:rotate(45deg);transition:transform .2s;margin-left:4px}
+.mixbox[open]>summary::after{transform:rotate(-135deg)}
+.mixbox .meta{color:var(--accent);font-weight:600;font-size:.8rem}
+.mix-head{display:none}
+.mixer{display:grid;gap:6px;margin:10px 0}
+.mix-row{display:grid;grid-template-columns:minmax(90px,1.1fr) minmax(90px,2fr) 64px minmax(110px,1.4fr) auto auto;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--line);transition:opacity .15s}
+.mix-row.master{grid-template-columns:minmax(90px,1.1fr) minmax(90px,2fr) 64px;border-style:dashed}
+.mix-row.silent{opacity:.45}
+.mix-name{font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mix-row input[type=range]{width:100%;min-width:0}
+.mix-val{font:500 .74rem var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+.mix-panw{display:flex;align-items:center;gap:4px;font:600 .68rem var(--mono);color:var(--ink-2);min-width:0}
+.mix-panv{min-width:30px;text-align:right;font:500 .72rem var(--mono)}
+.mix-btn{min-height:30px;min-width:32px;padding:0;font:700 .78rem var(--mono);border-radius:8px}
+.mix-btn.m[aria-pressed=true]{background:#F59E0B;color:#1C1408;border-color:transparent}
+.mix-btn.s[aria-pressed=true]{background:#22C55E;color:#06210F;border-color:transparent}
+@media (max-width:620px){
+  .mix-row{grid-template-columns:1fr auto auto;grid-template-areas:"name m s" "vol vol val" "pan pan pan"}
+  .mix-row .mix-name{grid-area:name}.mix-row>input[type=range]{grid-area:vol}.mix-row .mix-val{grid-area:val}.mix-row .mix-panw{grid-area:pan}.mix-row .m{grid-area:m}.mix-row .s{grid-area:s}
+  .mix-row.master{grid-template-columns:1fr auto;grid-template-areas:"name name" "vol val"}
+}
+@media (pointer:coarse){.mix-btn{min-height:40px;min-width:42px}}
 .tp{display:grid;gap:4px;font-size:.78rem;color:var(--ink-2)}
 .tp select{background:var(--surface)}
 #sndStatus:not(:empty){width:100%}
@@ -565,6 +590,12 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <div class="voices" id="voices"></div>
         <label class="tp">ทรานสโพส <select id="transpose"></select></label>
         <div class="status" id="sndStatus" aria-live="polite"></div>
+        <details class="mixbox" id="mixBox" open>
+          <summary><svg class="i"><use href="#i-sliders"/></svg>Mix <span class="meta" id="mixSum"></span></summary>
+          <div class="mix-head"><span>Volume</span><span>Pan</span><span>M / S</span></div>
+          <div class="mixer" id="mixer"></div>
+          <div class="row"><button type="button" id="mixReset" class="ghost">Reset mix</button><span class="note">M = Mute (ปิดเสียง) · S = Solo (ฟังเฉพาะแนวนี้) · ดับเบิลคลิกแถบ Pan เพื่อกลับกลาง</span></div>
+        </details>
       </div>
 
       <div class="score-wrap">
@@ -873,6 +904,31 @@ function synthNote(dest, midi, t, dur, vel){
   g.gain.exponentialRampToValueAtTime(v*.25,t+Math.max(.26,dur));
   g.gain.exponentialRampToValueAtTime(.0001,t+dur+.35);
 }
+/* ---------- Mix: per-voice volume, pan, mute, solo + master ---------- */
+const mix = { master: 80, tracks: {} };             // tracks[i] = { vol 0–100, pan -100–100, mute, solo }
+let mixNodes = {};                                  // track -> { g, p } while playing
+const mixOf = t => (mix.tracks[t] = mix.tracks[t] || { vol: 80, pan: 0, mute: false, solo: false });
+const volGain = v => Math.pow(v / 80, 2);           // 80 = unity, 100 ≈ +3.9 dB, 0 = silent
+function trackGain(t){
+  const m = mixOf(t), anySolo = Object.values(mix.tracks).some(x => x.solo);
+  if (m.mute || (anySolo && !m.solo)) return 0;
+  return volGain(m.vol);
+}
+function applyMix(){
+  if (master && ctx) try{ master.gain.setTargetAtTime(volGain(mix.master), ctx.currentTime, .03); }catch(e){}
+  for (const [t, n] of Object.entries(mixNodes)){
+    try{ n.g.gain.setTargetAtTime(trackGain(+t), ctx.currentTime, .03); if (n.p) n.p.pan.setTargetAtTime(mixOf(+t).pan / 100, ctx.currentTime, .03); }catch(e){}
+  }
+  drawMixState();
+}
+function trackNode(c, dest, t){
+  if (mixNodes[t]) return mixNodes[t].g;
+  const g = c.createGain(); g.gain.value = trackGain(t);
+  let p = null;
+  if (c.createStereoPanner){ p = c.createStereoPanner(); p.pan.value = mixOf(t).pan / 100; g.connect(p).connect(dest); } else g.connect(dest);
+  mixNodes[t] = { g, p };
+  return g;
+}
 function note(dest, bufs, ev, t, dur){
   const p = ev.instrument||0, b = bufs[p];
   if (b) sampleNote(dest, b, p, ev.pitch, t, dur, ev.volume); else synthNote(dest, ev.pitch, t, dur, ev.volume);
@@ -899,7 +955,64 @@ function normalizeVoices(abc){
   const kl = L.splice(k, 1)[0]; L.splice(at, 0, kl);
   return L.join('\n');
 }
+function drawMixer(){
+  const box = $('#mixer'); if (!box) return;
+  const ids = voiceIds(), sig = JSON.stringify(trackInfo.map(t => t.track)) + '|' + ids.join(',');
+  if (box.dataset.sig !== sig){
+    box.dataset.sig = sig; box.textContent = '';
+    const row = (key, label, isMaster) => {
+      const m = isMaster ? null : mixOf(key);
+      const r = document.createElement('div'); r.className = 'mix-row' + (isMaster ? ' master' : ''); r.dataset.t = key;
+      const nm = document.createElement('span'); nm.className = 'mix-name'; nm.textContent = label;
+      const vol = document.createElement('input'); vol.type = 'range'; vol.min = 0; vol.max = 100; vol.step = 1; vol.value = isMaster ? mix.master : m.vol; vol.id = 'mixVol-' + key; vol.setAttribute('aria-label', label + ' volume');
+      const out = document.createElement('output'); out.className = 'mix-val';
+      vol.addEventListener('input', () => { if (isMaster) mix.master = +vol.value; else mixOf(key).vol = +vol.value; applyMix(); });
+      r.append(nm, vol, out);
+      if (!isMaster){
+        const pan = document.createElement('input'); pan.type = 'range'; pan.min = -100; pan.max = 100; pan.step = 5; pan.value = m.pan; pan.className = 'mix-pan'; pan.id = 'mixPan-' + key; pan.setAttribute('aria-label', label + ' pan');
+        pan.addEventListener('input', () => { mixOf(key).pan = +pan.value; applyMix(); });
+        pan.addEventListener('dblclick', () => { pan.value = 0; mixOf(key).pan = 0; applyMix(); });
+        const pv = document.createElement('output'); pv.className = 'mix-panv';
+        const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'mix-btn m'; mb.textContent = 'M'; mb.title = 'Mute'; mb.setAttribute('aria-label', label + ' mute');
+        const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'mix-btn s'; sb.textContent = 'S'; sb.title = 'Solo'; sb.setAttribute('aria-label', label + ' solo');
+        mb.onclick = () => { mixOf(key).mute = !mixOf(key).mute; applyMix(); };
+        sb.onclick = () => { mixOf(key).solo = !mixOf(key).solo; applyMix(); };
+        const panWrap = document.createElement('span'); panWrap.className = 'mix-panw'; panWrap.append('L', pan, 'R', pv);
+        r.append(panWrap, mb, sb);
+      }
+      box.append(r);
+    };
+    trackInfo.forEach(ti => { const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : ''; row(ti.track, trackInfo.length > 1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', false); });
+    row('master', 'Master', true);
+  }
+  drawMixState();
+}
+function drawMixState(){
+  const anySolo = Object.values(mix.tracks).some(x => x.solo);
+  document.querySelectorAll('#mixer .mix-row').forEach(r => {
+    const key = r.dataset.t, isMaster = key === 'master', m = isMaster ? null : mixOf(+key);
+    const v = isMaster ? mix.master : m.vol;
+    r.querySelector('.mix-val').textContent = v === 0 ? '−∞' : ((20 * Math.log10(volGain(v))) >= 0 ? '+' : '') + (20 * Math.log10(volGain(v))).toFixed(1) + ' dB';
+    if (!isMaster){
+      const pv = r.querySelector('.mix-panv'); pv.textContent = m.pan === 0 ? 'C' : (m.pan < 0 ? 'L' : 'R') + Math.abs(m.pan);
+      r.querySelector('.m').setAttribute('aria-pressed', m.mute ? 'true' : 'false');
+      r.querySelector('.s').setAttribute('aria-pressed', m.solo ? 'true' : 'false');
+      r.classList.toggle('silent', m.mute || (anySolo && !m.solo));
+    }
+  });
+  const sum = $('#mixSum');
+  if (sum){
+    const n = Object.entries(mix.tracks).filter(([t]) => trackInfo.some(x => x.track === +t));
+    const muted = n.filter(([, x]) => x.mute).length, solo = n.filter(([, x]) => x.solo).length;
+    sum.textContent = solo ? '· Solo ' + solo : muted ? '· Mute ' + muted : '';
+  }
+}
+$('#mixReset').addEventListener('click', () => {
+  mix.master = 80; mix.tracks = {};
+  document.querySelector('#mixer').dataset.sig = ''; drawMixer(); applyMix();
+});
 function drawVoiceRows(){
+  drawMixer();
   const box = $('#voices'), ids = voiceIds();
   const sig = JSON.stringify(trackInfo);
   if (box.dataset.sig === sig) return;
@@ -995,13 +1108,13 @@ async function play(from = cue, to = null){
   const c = await ready(); if (!c || tok!==playToken){ if (tok===playToken) stopPlay(); return; }
   const bufs = await loadAll([...new Set(events.map(e=>e.instrument||0))]);
   if (tok !== playToken) return;
-  master = c.createGain(); master.gain.value = 1;
+  master = c.createGain(); master.gain.value = volGain(mix.master); mixNodes = {};
   const comp = c.createDynamicsCompressor(); master.connect(comp).connect(c.destination);
   const spw = msPerWhole()/1000, endW = to == null ? tw : Math.min(to, tw), t0 = c.currentTime + .1 - from*spw;
   for (const ev of events){
     if (ev.start < from - 1e-6 || ev.start >= endW - 1e-6) continue;
     const d = Math.max(.05, Math.min(ev.duration, endW - ev.start)*spw - .01);
-    note(master, bufs, ev, t0 + ev.start*spw, d);
+    note(trackNode(c, master, ev.track || 0), bufs, ev, t0 + ev.start*spw, d);
   }
   span = { t0, from, spw };
   const tick = () => { if (tok!==playToken) return; const w = Math.min(tw, nowWhole()); $('#pBar').style.width = (tw ? w/tw*100 : 0) + '%'; $('#pTime').textContent = fmtTime(w*spw) + ' / ' + fmtTime(tw*spw); progRAF = requestAnimationFrame(tick); };
@@ -1054,8 +1167,8 @@ function previewPitches(start){
   (async () => {
     const r = await ready(); if (!r) return;
     const bufs = await loadAll([...new Set(evs.map(e=>e.instrument||0))]);
-    const g = c.createGain(); g.connect(c.destination);
-    evs.forEach(e=>note(g, bufs, e, c.currentTime+.03, .5));
+    const g = c.createGain(); g.gain.value = volGain(mix.master); g.connect(c.destination);
+    evs.forEach(e=>{ const tg = c.createGain(); tg.gain.value = trackGain(e.track || 0) || .25; tg.connect(g); note(tg, bufs, e, c.currentTime+.03, .5); });
     setTimeout(()=>{ try{g.disconnect();}catch(x){} }, 3000);
   })();
 }
