@@ -248,6 +248,12 @@ html.ai-off #fixBars{display:none}
 .tb-tune span{font-weight:400;color:var(--ink-2);font-size:.78rem}
 .thaiband .note{margin:0}
 .tb-rec{border-top:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));padding-top:8px}
+.realsnd{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.realsnd>summary{display:flex;align-items:center;gap:8px}
+.realsnd[open]{border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.my-set{display:grid;gap:6px}
+.rec-use{display:grid;gap:6px}
+.rec-use .chip[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
 .tb-rec>summary{cursor:pointer;font-weight:600;font-size:.86rem}
 .tb-rec .meta{color:var(--accent);font-weight:600;font-size:.78rem}
 .rec-body{display:grid;gap:8px;margin-top:8px}
@@ -689,21 +695,27 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
           <div class="tb-chips"><button type="button" class="chip" data-band="piphat" aria-pressed="false">วงปี่พาทย์</button><button type="button" class="chip" data-band="saichai" aria-pressed="false">วงเครื่องสาย</button><button type="button" class="chip" data-band="mahori" aria-pressed="false">วงมโหรี</button><button type="button" class="chip" data-band="isan" aria-pressed="false">วงพื้นบ้านอีสาน</button></div>
           <label class="tb-tune"><input type="checkbox" id="thaiTune"> เสียงแบบไทย 7 เสียงเท่า <span>(ปรับระดับเสียงให้ตรงระบบเสียงไทย)</span></label>
           <p class="note">เลือกวงเพื่อใส่เครื่องดนตรีให้ทุกแนวพร้อมกัน หรือเลือกทีละแนวในช่องด้านล่าง (กลุ่ม Thai instruments) · เสียงเครื่องไทยสังเคราะห์ขึ้นเลียนแบบเครื่องจริง (ระนาด ฆ้อง ขิม จะเข้ ซอ ขลุ่ย ปี่ แคน) และจะใช้เสียงที่คุณอัดเองแทนเมื่อมี</p>
-          <details class="tb-rec" id="thaiRec">
-            <summary>ใช้เสียงเครื่องดนตรีจริงที่อัดเอง <span class="meta" id="recSum"></span></summary>
-            <div class="rec-body">
-              <label class="field">เครื่องดนตรี <select id="recInst"></select></label>
-              <div class="row">
-                <label class="btn">เลือกไฟล์เสียง<input id="recFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.ogg,.flac" multiple></label>
-                <button type="button" id="recMic" aria-pressed="false">อัดเสียงจากไมค์</button>
-              </div>
-              <div class="status" id="recStatus" aria-live="polite"></div>
-              <ul class="rec-list" id="recList"></ul>
-              <p class="note">อัดทีละ 1 เสียง ยาว 1–3 วินาที ในห้องเงียบ แอปจะตรวจหาว่าเป็นโน้ตตัวใด (แก้ได้) · ยิ่งอัดหลายเสียงทั่วช่วงเสียงของเครื่อง (เช่น ทุก 3–4 เสียง) ยิ่งสมจริง · เสียงเก็บไว้ในเครื่องนี้เท่านั้น ไม่ถูกส่งออกไปที่ใด</p>
-            </div>
-          </details>
         </div>
         <div class="voices" id="voices"></div>
+        <details class="tb-rec realsnd" id="thaiRec">
+          <summary><svg class="i"><use href="#i-volume"/></svg>ใช้เสียงจริงจากไฟล์เสียง <span class="meta" id="recSum"></span></summary>
+          <div class="rec-body">
+            <p class="note">ใส่เสียงเครื่องดนตรีจริงที่อัดไว้ (เช่น ระนาด ซอ ขลุ่ย กีตาร์ หรือเสียงร้อง) แล้วกด "ใช้กับ" เพื่อให้โน้ตแนวนั้นเล่นด้วยเสียงจริง แอปจะปรับระดับเสียงให้ตรงกับทุกตัวโน้ตเอง</p>
+            <label class="field">ชุดเสียง <select id="recInst"></select></label>
+            <div class="my-set" id="mySet" hidden>
+              <label class="field">ชื่อชุดเสียง <input type="text" id="myName" maxlength="30" placeholder="เช่น ระนาดห้องดนตรี"></label>
+              <label class="rem"><input type="checkbox" id="mySus"> เสียงยาวต่อเนื่อง (เครื่องสี เครื่องเป่า เสียงร้อง) · ไม่ติ๊ก = เสียงตี/ดีด</label>
+            </div>
+            <div class="row">
+              <label class="btn">เลือกไฟล์เสียง<input id="recFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.ogg,.flac" multiple></label>
+              <button type="button" id="recMic" aria-pressed="false">อัดเสียงจากไมค์</button>
+            </div>
+            <div class="status" id="recStatus" aria-live="polite"></div>
+            <ul class="rec-list" id="recList"></ul>
+            <div class="rec-use" id="recUse" hidden><span class="chip-h">ใช้กับ</span><div class="chips" id="recUseBtns"></div></div>
+            <p class="note">อัดทีละ 1 เสียง ยาว 1–3 วินาที ในห้องเงียบ แอปจะตรวจหาว่าเป็นโน้ตตัวใด (แก้ได้) · ยิ่งอัดหลายเสียงทั่วช่วงเสียง (เช่น ทุก 3–4 เสียง) ยิ่งสมจริง · ตั้งชื่อไฟล์เป็นชื่อโน้ตได้ เช่น ranat-G4.wav · เสียงเก็บไว้ในเครื่องนี้เท่านั้น</p>
+          </div>
+        </details>
         <label class="tp">ทรานสโพส <select id="transpose"></select></label>
         <div class="status" id="sndStatus" aria-live="polite"></div>
         <details class="mixbox" id="mixBox" open>
@@ -993,7 +1005,13 @@ const THAI_INST = [
   ['khaen', 'Khaen', 'แคน', 22], ['phin', 'Phin', 'พิณ', 106], ['pong-lang', 'Pong Lang', 'โปงลาง', 108], ['sueng', 'Sueng', 'ซึง', 105],
   ['ching', 'Ching', 'ฉิ่ง', 112], ['khap-rong', 'Thai Vocal', 'ขับร้อง', 53],
 ].map(([key, en, th, gm]) => ({ key, en, th, gm }));
-const THAI_BY = Object.fromEntries(THAI_INST.map(x => [x.key, x]));
+// "My Sound" sets: the user's own recordings of any instrument (MIDI export falls back to piano)
+const MY_INST = Array.from({ length: 6 }, (_, i) => ({ key: 'my-' + (i + 1), en: 'My Sound ' + (i + 1), th: 'เสียงของฉัน ' + (i + 1), gm: 0, my: true }));
+const THAI_BY = Object.fromEntries([...THAI_INST, ...MY_INST].map(x => [x.key, x]));
+let myPrefs = (() => { try{ return JSON.parse(localStorage.getItem('scoresnap.mysounds') || '{}') || {}; }catch(e){ return {}; } })();
+const saveMy = () => { try{ localStorage.setItem('scoresnap.mysounds', JSON.stringify(myPrefs)); }catch(e){} };
+const myName = k => (myPrefs[k] && myPrefs[k].name) || THAI_BY[k].en;
+const mySus = k => !!(myPrefs[k] && myPrefs[k].sus);
 const THAI_BANDS = [
   ['piphat', 'วงปี่พาทย์', ['ranat-ek', 'khong-yai', 'ranat-thum', 'pi-nai', 'khong-lek']],
   ['saichai', 'วงเครื่องสาย', ['saw-duang', 'saw-u', 'jakhe', 'khlui', 'khim']],
@@ -1219,9 +1237,13 @@ const THAI_SND = (() => {
     const list = user[key]; let s = list[0];
     for (const x of list) if (Math.abs(x.midi - midi) < Math.abs(s.midi - midi)) s = x;
     const src = c.createBufferSource(), g = c.createGain(), rate = Math.pow(2, (midi - s.midi) / 12);
-    src.buffer = s.buf; src.playbackRate.value = rate; src.connect(g).connect(dest);
-    const A = vel(v) * .95, nat = s.buf.duration / rate, sustained = !!SUS[key] || key === 'khap-rong';
-    const end = Math.min(t + nat, sustained ? t + Math.max(.1, dur) + .08 : t + Math.max(dur, .25) + 1.2);
+    src.playbackRate.value = rate; src.connect(g).connect(dest);
+    const A = vel(v) * .95, nat = s.buf.duration / rate, sustained = !!SUS[key] || key === 'khap-rong' || !!(api.susOf && api.susOf(key));
+    let end = Math.min(t + nat, sustained ? t + Math.max(.1, dur) + .08 : t + Math.max(dur, .25) + 1.2);
+    // a held note longer than the recording: loop its steady middle (pre-crossfaded, so no click)
+    if (sustained && s.loop && dur + .08 > nat * .92){
+      src.buffer = s.loop.buf; src.loop = true; src.loopStart = s.loop.a; src.loopEnd = s.loop.b; end = t + Math.max(.1, dur) + .08;
+    } else src.buffer = s.buf;
     g.gain.setValueAtTime(A, t); g.gain.setValueAtTime(A, Math.max(t, end - .08)); g.gain.linearRampToValueAtTime(0, end);
     src.start(t); src.stop(end + .02);
   }
@@ -1259,6 +1281,12 @@ const THAI_SND = (() => {
     let endI = n; const tail = pk * .004; while (endI > on + sr * .1 && Math.abs(mono[endI - 1]) < tail) endI--;
     const len = Math.min(endI - on, sr * 6), b = c.createBuffer(1, len, sr), o = b.getChannelData(0), g = .85 / pk, fo = Math.round(sr * .03);
     for (let i = 0; i < len; i++) o[i] = mono[on + i] * g * Math.min(1, i / 32) * (i > len - fo ? (len - i) / fo : 1);
+    if (len > sr * .5){                               // a loopable copy for long notes
+      const a = Math.round(len * .35), z = Math.round(len * .82), F = Math.min(Math.round(sr * .12), Math.floor((z - a) / 3));
+      const lb = c.createBuffer(1, len, sr), l = lb.getChannelData(0); l.set(o);
+      for (let i = 0; i < F; i++){ const x = i / F; l[z - F + i] = o[z - F + i] * (1 - x) + o[a - F + i] * x; }
+      b._loop = { buf: lb, a: a / sr, b: z / sr };
+    }
     return b;
   }
   const DB = 'scoresnap-samples';
@@ -1268,13 +1296,13 @@ const THAI_SND = (() => {
     const raw = await c.decodeAudioData(data.slice(0));
     const buf = tidy(c, raw), m = midi != null ? midi : detect(buf);
     const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), key, name, midi: m == null ? 60 : Math.round(m), data };
-    (user[key] = user[key] || []).push({ id: rec.id, midi: rec.midi, name, buf, detected: m });
+    (user[key] = user[key] || []).push({ id: rec.id, midi: rec.midi, name, buf, loop: buf._loop, detected: m });
     try{ await dbDo('readwrite', st => st.put(rec)); rec.saved = true; }catch(e){ rec.saved = false; }
     return { ...rec, detected: m };
   }
   async function load(c){
     let all = []; try{ all = await dbDo('readonly', st => st.getAll()) || []; }catch(e){ return 0; }
-    for (const r of all){ try{ const buf = tidy(c, await c.decodeAudioData(r.data.slice(0))); (user[r.key] = user[r.key] || []).push({ id: r.id, midi: r.midi, name: r.name, buf }); }catch(e){} }
+    for (const r of all){ try{ const buf = tidy(c, await c.decodeAudioData(r.data.slice(0))); (user[r.key] = user[r.key] || []).push({ id: r.id, midi: r.midi, name: r.name, buf, loop: buf._loop }); }catch(e){} }
     return all.length;
   }
   async function remove(key, id){ user[key] = (user[key] || []).filter(x => x.id !== id); try{ await dbDo('readwrite', st => st.delete(id)); }catch(e){} }
@@ -1282,8 +1310,10 @@ const THAI_SND = (() => {
     const x = (user[key] || []).find(x => x.id === id); if (x) x.midi = midi;
     try{ const db = await idb(); const tx = db.transaction('s', 'readwrite'), st = tx.objectStore('s'), g = st.get(id); g.onsuccess = () => { if (g.result){ g.result.midi = midi; st.put(g.result); } }; }catch(e){}
   }
-  return { has, play, prepare, add, load, remove, setMidi, user, PERC, SUS, detect };
+  const api = { has, play, prepare, add, load, remove, setMidi, user, PERC, SUS, detect, susOf: null };
+  return api;
 })();
+THAI_SND.susOf = k => mySus(k);
 
 /* ---------- Mix console: per-voice fader, pan, reverb/delay sends, mute, solo + FX returns + master ---------- */
 const MIX_DEF = () => ({ master: 80, tracks: {}, fx: { rev: { size: 'hall', ret: 80 }, dly: { time: '8', fb: 35, ret: 70 } } });
@@ -1489,7 +1519,7 @@ function drawMixer(){
       const label = trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'Instrument';
       const s = el('div', 'strip'); s.dataset.t = key; s.style.setProperty('--c', STRIP_COLORS[i % STRIP_COLORS.length]);
       const nm = el('div', 'st-name', label); nm.title = label;
-      const inst = el('div', 'st-inst', instLabel(ti)); inst.title = instLabel(ti) + (ti.thai ? ' · ' + THAI_BY[ti.thai].th : '');
+      const inst = el('div', 'st-inst', instLabel(ti)); inst.title = instLabel(ti) + (ti.thai && !THAI_BY[ti.thai].my ? ' · ' + THAI_BY[ti.thai].th : '');
       const kn = el('div', 'knobs');
       kn.append(
         knob({ label: 'Reverb', aria: label + ' reverb', min: 0, max: 100, def: 20, cls: 'rev', get: () => m().rev, set: v => m().rev = v, fmt: pct }),
@@ -1558,8 +1588,8 @@ $('#mixReset').addEventListener('click', () => {
   Object.assign(mix, MIX_DEF());
   document.querySelector('#mixer').dataset.sig = ''; drawMixer(); applyMix();
 });
-const instLabel = ti => ti.thai ? THAI_BY[ti.thai].en : progLabel(ti.prog);
-const isThaiScore = () => /^C:\s*แปลงจากโน้ตไทย/m.test(ta.value) || /^%ss-thai\s/m.test(ta.value);
+const instLabel = ti => ti.thai ? (THAI_BY[ti.thai].my ? myName(ti.thai) : THAI_BY[ti.thai].en) : progLabel(ti.prog);
+const isThaiScore = () => /^C:\s*แปลงจากโน้ตไทย/m.test(ta.value) || /^%ss-thai\s+(?!my-)/m.test(ta.value);
 // header line that owns a voice's settings (its V: line, or K: for a single voice); -1 if none
 function voiceLine(lines, track){
   const ids = voiceIds(), vid = trackInfo.length > 1 ? ids[track] : undefined;
@@ -1577,9 +1607,10 @@ function drawVoiceRows(){
   drawThaiBand();
   drawMixer();
   const box = $('#voices'), ids = voiceIds();
-  const sig = JSON.stringify(trackInfo);
-  if (box.dataset.sig === sig) return;
+  const sig = JSON.stringify(trackInfo) + '|' + MY_INST.map(x => myName(x.key) + (THAI_SND.user[x.key] || []).length).join(',');
+  if (box.dataset.sig === sig){ drawRecUse(); return; }
   box.dataset.sig = sig; box.textContent = '';
+  setTimeout(drawRecUse);
   const thaiFirst = isThaiScore();
   trackInfo.forEach((ti) => {
     const lab = document.createElement('label'), sel = document.createElement('select');
@@ -1588,6 +1619,12 @@ function drawVoiceRows(){
     lab.append(trackInfo.length>1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', sel);
     const thaiGroup = document.createElement('optgroup'); thaiGroup.label = 'Thai instruments · เครื่องดนตรีไทย';
     THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = 't:' + x.key; o.textContent = x.en + ' · ' + x.th; thaiGroup.append(o); });
+    const mine = MY_INST.filter(x => (THAI_SND.user[x.key] || []).length || ti.thai === x.key);
+    if (mine.length){
+      const mg = document.createElement('optgroup'); mg.label = 'My sounds · เสียงจริงจากไฟล์';
+      mine.forEach(x => { const o = document.createElement('option'); o.value = 't:' + x.key; o.textContent = myName(x.key) + ' (' + (THAI_SND.user[x.key] || []).length + ' เสียง)'; mg.append(o); });
+      sel.append(mg);
+    }
     if (thaiFirst) sel.append(thaiGroup);
     FAM.forEach((f, fi) => {
       const og = document.createElement('optgroup'); og.label = f;
@@ -1672,13 +1709,45 @@ let recCtx = null;
 const recC = () => (recCtx = recCtx || (window.OfflineAudioContext ? new OfflineAudioContext(1, 1, 48000) : null));
 (() => {
   const si = $('#recInst');
-  THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = x.key; o.textContent = x.en + ' · ' + x.th; si.append(o); });
+  fillRecInst();
   si.addEventListener('change', drawRecList);
   $('#thaiRec').addEventListener('toggle', () => { if ($('#thaiRec').open){ const used = trackInfo.find(t => t.thai); if (used && !(THAI_SND.user[si.value] || []).length) si.value = used.thai; drawRecList(); } });
+  $('#myName').addEventListener('input', () => { const k = si.value; (myPrefs[k] = myPrefs[k] || {}).name = $('#myName').value.trim(); saveMy(); fillRecInst(); refreshVoiceRows(); });
+  $('#mySus').addEventListener('change', () => { const k = si.value; (myPrefs[k] = myPrefs[k] || {}).sus = $('#mySus').checked; saveMy(); });
   const c = recC(); if (c) THAI_SND.load(c).then(n => { if (n) drawRecList(); }).catch(() => {});
 })();
+function fillRecInst(){
+  const si = $('#recInst'), cur = si.value || (isThaiScore() ? 'ranat-ek' : 'my-1');
+  si.textContent = '';
+  const g1 = document.createElement('optgroup'); g1.label = 'เสียงของฉัน (เครื่องดนตรีใดก็ได้)';
+  MY_INST.forEach(x => { const o = document.createElement('option'); o.value = x.key; const n = (THAI_SND.user[x.key] || []).length; o.textContent = myName(x.key) + (n ? ' · ' + n + ' เสียง' : ''); g1.append(o); });
+  const g2 = document.createElement('optgroup'); g2.label = 'เครื่องดนตรีไทย';
+  THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = x.key; const n = (THAI_SND.user[x.key] || []).length; o.textContent = x.en + ' · ' + x.th + (n ? ' · ' + n + ' เสียง' : ''); g2.append(o); });
+  if (isThaiScore()) si.append(g2, g1); else si.append(g1, g2);
+  si.value = cur;
+}
+const refreshVoiceRows = () => { const v = $('#voices'); if (v) v.dataset.sig = ''; drawVoiceRows(); };
+function drawRecUse(){
+  const key = $('#recInst').value, box = $('#recUseBtns'), wrap = $('#recUse'); if (!box) return;
+  const has = (THAI_SND.user[key] || []).length > 0;
+  wrap.hidden = !has || !trackInfo.length; box.textContent = '';
+  if (wrap.hidden) return;
+  const ids = voiceIds();
+  const btn = (label, on, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = label; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.onclick = fn; box.append(b); };
+  trackInfo.forEach(ti => {
+    const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
+    btn(trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'โน้ตทั้งเพลง', ti.thai === key, () => { setProgram(ti.track, THAI_BY[key].gm, ti.thai === key ? '' : key); });
+  });
+  if (trackInfo.length > 1) btn('ทุกแนว', trackInfo.every(t => t.thai === key), () => {
+    ta.value = normalizeVoices(ta.value); const L = ta.value.split('\n');
+    trackInfo.forEach(t => writeProgram(L, t.track, THAI_BY[key].gm, key));
+    ta.value = L.join('\n'); sel = null; if (isExample) setBadge('แก้ไขแล้ว', false); render(); updateSelLabel(); previewInst(THAI_BY[key].gm, key);
+  });
+}
 function drawRecList(){
   const key = $('#recInst').value, ul = $('#recList'), list = THAI_SND.user[key] || [];
+  const my = !!THAI_BY[key].my; $('#mySet').hidden = !my;
+  if (my){ $('#myName').value = (myPrefs[key] && myPrefs[key].name) || ''; $('#myName').placeholder = 'เช่น ระนาดห้องดนตรี (ตอนนี้: ' + THAI_BY[key].en + ')'; $('#mySus').checked = mySus(key); }
   ul.textContent = '';
   [...list].sort((a, b) => a.midi - b.midi).forEach(x => {
     const li = document.createElement('li'), nm = document.createElement('span'), sel = document.createElement('select'), pl = document.createElement('button'), del = document.createElement('button');
@@ -1693,6 +1762,7 @@ function drawRecList(){
   });
   const total = Object.values(THAI_SND.user).reduce((s, l) => s + l.length, 0);
   $('#recSum').textContent = total ? '· ' + total + ' เสียง' : '';
+  fillRecInst(); refreshVoiceRows(); drawRecUse();
 }
 async function addRecording(data, name){
   const key = $('#recInst').value, st = $('#recStatus'), c = recC();
@@ -1703,7 +1773,8 @@ async function addRecording(data, name){
   try{
     const r = await THAI_SND.add(c, key, data, name, midi);
     const how = midi != null ? 'จากชื่อไฟล์' : r.detected != null ? 'ตรวจพบ' : 'ตรวจหาโน้ตไม่ได้ ตั้งเป็น';
-    st.className = 'status ok'; st.textContent = 'เพิ่ม "' + name + '" ให้ ' + THAI_BY[key].th + ' แล้ว · ' + how + ' ' + noteName(r.midi) + (r.saved ? '' : ' · บันทึกถาวรไม่ได้ในเบราว์เซอร์นี้ ใช้ได้จนกว่าจะปิดหน้า');
+    const used = trackInfo.some(t => t.thai === key);
+    st.className = 'status ok'; st.textContent = 'เพิ่ม "' + name + '" ให้ ' + (THAI_BY[key].my ? myName(key) : THAI_BY[key].th) + ' แล้ว · ' + how + ' ' + noteName(r.midi) + (used ? ' · แนวที่ใช้ชุดนี้จะเล่นด้วยเสียงนี้แล้ว' : ' · กดปุ่ม "ใช้กับ" ด้านล่างเพื่อให้โน้ตเล่นด้วยเสียงนี้') + (r.saved ? '' : ' · บันทึกถาวรไม่ได้ในเบราว์เซอร์นี้ ใช้ได้จนกว่าจะปิดหน้า');
     drawRecList();
   }catch(e){ st.className = 'status err'; st.textContent = 'เปิด "' + name + '" ไม่ได้ ใช้ไฟล์ .wav .mp3 หรือ .m4a ที่มีเสียง'; }
 }
