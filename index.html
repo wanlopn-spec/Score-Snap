@@ -1898,7 +1898,14 @@ async function auRun(notate){
     g.shift = A2N.downbeat(allNotes, g, beats, sub);
     { const first = A2N.quantize(allNotes, g).reduce((m, n) => Math.min(m, n.s), Infinity), bl = beats * sub; if (first >= bl) g.shift -= Math.floor(first / bl) * bl; }
     let shaped;
-    if (mode === 'stems') shaped = parts.map(p => { const q = A2N.quantize(p.raw, g); return { name: p.name, prog: p.prog, clef: p.clef, notes: p.kind === 'high' ? A2N.mono(q, 'high') : p.kind === 'low' ? A2N.mono(q, 'low') : A2N.chords(q, 3) }; });
+    if (mode === 'stems'){
+      shaped = parts.map(p => { const q = A2N.quantize(p.raw, g); return { name: p.name, prog: p.prog, clef: p.clef, kind: p.kind, notes: p.kind === 'high' ? A2N.mono(q, 'high') : p.kind === 'low' ? A2N.mono(q, 'low') : A2N.chords(q, 3) }; });
+      // a note another part already plays at the same moment (same pitch or an octave apart) is bleed: keep it in one part only
+      const owner = shaped.filter(p => p.kind !== 'chords'), hit = (n, ps) => ps.some(p => p.notes.some(m => Math.abs(m.s - n.s) <= 1 && [0, 12, -12, 24, -24].includes(m.p - n.p)));
+      shaped.forEach(p => { if (p.kind === 'chords') p.notes = p.notes.filter(n => !hit(n, owner)); });
+      const bassP = shaped.find(p => p.kind === 'low'), voc = shaped.find(p => p.kind === 'high');
+      if (bassP && voc) voc.notes = voc.notes.filter(n => n.p >= 52 || !hit(n, [bassP]));
+    }
     else shaped = A2N.split(A2N.quantize(parts[0].raw, g), mode);
     const k = A2N.key(allNotes);
     const abc = A2N.build(shaped, { sub, beats, bpm, key: k, title: baseName0(AU.file.name), mode });
