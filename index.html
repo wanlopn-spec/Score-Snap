@@ -355,6 +355,18 @@ html.ai-off #fixBars{display:none}
 .tabs [role=tab][aria-selected=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
 .tools [role=tabpanel]{display:grid;gap:12px}
 .chip-groups{display:grid;gap:12px}
+.mk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding-bottom:10px;margin-bottom:2px;border-bottom:1px dashed var(--line)}
+.mk-groups{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 auto}
+.mk-groups button{min-height:28px;padding:0 10px;border-radius:99px;font-size:.74rem;font-weight:600;background:var(--surface);color:var(--ink-2)}
+.mk-groups button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
+.mk-groups button[aria-pressed=true]::before{content:"✓ "}
+.mk-edit{min-height:28px;padding:0 12px;border-radius:99px;font-size:.74rem;font-weight:600}
+.mk-edit[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:transparent}
+.mk-tip{margin:0}
+.linkish{min-height:0;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+#tMarks.customize .chip{border-style:dashed}
+#tMarks.customize .chip.off{opacity:.38;text-decoration:line-through}
+#tMarks.customize .chip:not(.off)::after{content:" ✓";color:var(--accent);font-weight:700}
 .chip-g{display:grid;gap:6px}
 .chip-h{font-size:.76rem;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -705,6 +717,12 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         </div>
         <div role="tabpanel" id="tMarksP" aria-labelledby="tab-marks">
           <p class="note needsel">แตะตัวโน้ตบนบรรทัดห้าเส้น แล้วเลือกเครื่องหมายที่ต้องการ แตะซ้ำเพื่อเอาออก</p>
+          <div class="mk-bar" id="mkBar">
+            <span class="chip-h">แสดง</span>
+            <div class="mk-groups" id="mkGroups" role="group" aria-label="กลุ่มเครื่องหมายที่แสดง"></div>
+            <button type="button" class="mk-edit" id="mkEdit" aria-pressed="false" title="เลือกทีละเครื่องหมายว่าจะแสดงหรือซ่อน">ปรับแต่ง</button>
+          </div>
+          <p class="note mk-tip" id="mkTip" hidden>แตะเครื่องหมายเพื่อซ่อนหรือแสดง (ตัวที่จางคือซ่อนอยู่) แล้วกด <b>เสร็จ</b> · <button type="button" class="linkish" id="mkAll">แสดงทั้งหมด</button></p>
           <div id="tMarks" class="chip-groups"></div>
         </div>
         <div role="tabpanel" id="tChordP" aria-labelledby="tab-chord" hidden>
@@ -3164,14 +3182,14 @@ const MARKS = [
 function drawMarks(){
   const box = $('#tMarks'); box.textContent = '';
   MARKS.forEach(grp => {
-    const g = document.createElement('div'); g.className = 'chip-g';
+    const g = document.createElement('div'); g.className = 'chip-g'; g.dataset.g = grp.g;
     const h = document.createElement('span'); h.className = 'chip-h'; h.textContent = grp.g; g.append(h);
     const row = document.createElement('div'); row.className = 'chips';
     grp.items.forEach(it => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (it.cls ? ' ' + it.cls : ''); b.textContent = it.label; b.dataset.k = it.k;
       if (it.sym){ const y = document.createElement('span'); y.className = 'sym'; y.textContent = it.sym; b.append(' ', y); }
       if (it.title){ b.title = it.title; b.setAttribute('aria-label', it.label + (it.sym ? ' ' + it.sym : '') + ' – ' + it.title); }
-      b.onclick = () => editTok(p => {
+      b.onclick = () => markCustom ? toggleMarkHidden(it.k) : editTok(p => {
         if (it.special === 'tie') p.tie = !p.tie;
         else if (it.special === 'slurS') p.slurOpen = p.slurOpen ? 0 : 1;
         else if (it.special === 'slurE') p.slurClose = p.slurClose ? 0 : 1;
@@ -3189,7 +3207,49 @@ function drawMarks(){
   const clr = document.createElement('button'); clr.type = 'button'; clr.className = 'chip clear'; clr.textContent = 'ลบเครื่องหมายทั้งหมดของโน้ตนี้';
   clr.onclick = () => editTok(p => { p.decos = []; p.tie = false; p.slurOpen = 0; p.slurClose = 0; });
   box.append(clr);
+  const gb = $('#mkGroups'); gb.textContent = '';
+  MARKS.forEach(grp => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.g = grp.g; b.textContent = MARK_GROUP_TH[grp.g] || grp.g; b.title = grp.g;
+    b.onclick = () => { markPrefs.groups[grp.g] = !markGroupOn(grp.g); saveMarkPrefs(); applyMarkVis(); };
+    gb.append(b);
+  });
+  applyMarkVis();
 }
+/* show / hide markings so the palette stays tidy (kept per device) */
+const MARK_GROUP_TH = { 'Dynamics': 'Dynamics', 'Articulation': 'Articulation', 'Ornament': 'Ornament', 'Tie · Slur · Hairpin': 'Tie · Slur · Hairpin', 'Navigation': 'Navigation' };
+const MARK_DEFAULT_ON = { 'Dynamics': true, 'Articulation': true, 'Ornament': false, 'Tie · Slur · Hairpin': true, 'Navigation': false };
+let markPrefs = (() => { try{ const v = JSON.parse(store.get('scoresnap.marks') || 'null'); if (v && v.groups) return { groups: v.groups, hidden: v.hidden || [] }; }catch(e){} return { groups: {}, hidden: [] }; })();
+let markCustom = false;
+const markGroupOn = g => markPrefs.groups[g] ?? MARK_DEFAULT_ON[g] ?? true;
+const saveMarkPrefs = () => store.set('scoresnap.marks', JSON.stringify(markPrefs));
+function toggleMarkHidden(k){
+  const h = new Set(markPrefs.hidden); h.has(k) ? h.delete(k) : h.add(k);
+  markPrefs.hidden = [...h]; saveMarkPrefs(); applyMarkVis();
+}
+function applyMarkVis(){
+  const box = $('#tMarks'); if (!box) return;
+  const p = typeof curTok === 'function' ? curTok() : null, hidden = new Set(markPrefs.hidden);
+  box.classList.toggle('customize', markCustom);
+  box.querySelectorAll('.chip-g').forEach(g => {
+    const gOn = markGroupOn(g.dataset.g);
+    let shown = 0;
+    g.querySelectorAll('.chip').forEach(b => {
+      const used = b.getAttribute('aria-pressed') === 'true';      // a marking already on the selected note always shows, so it can be removed
+      const off = hidden.has(b.dataset.k);
+      b.classList.toggle('off', off);
+      b.hidden = !markCustom && off && !used;
+      if (!b.hidden) shown++;
+    });
+    const anyUsed = !!g.querySelector('.chip[aria-pressed=true]');
+    g.hidden = (!gOn && !anyUsed) || (!markCustom && !shown);
+  });
+  document.querySelectorAll('#mkGroups button').forEach(b => b.setAttribute('aria-pressed', markGroupOn(b.dataset.g) ? 'true' : 'false'));
+  $('#mkEdit').setAttribute('aria-pressed', markCustom ? 'true' : 'false'); $('#mkEdit').textContent = markCustom ? 'เสร็จ' : 'ปรับแต่ง';
+  $('#mkTip').hidden = !markCustom;
+  const clr = box.querySelector('.chip.clear'); if (clr) clr.hidden = markCustom;
+}
+$('#mkEdit').addEventListener('click', () => { markCustom = !markCustom; refreshTools(); });
+$('#mkAll').addEventListener('click', () => { markPrefs = { groups: Object.fromEntries(MARKS.map(g => [g.g, true])), hidden: [] }; saveMarkPrefs(); applyMarkVis(); });
 
 /* chord symbols */
 const ROOTS = ['C','C#','Db','D','Eb','E','F','F#','Gb','G','Ab','A','Bb','B'];
@@ -3441,9 +3501,10 @@ function refreshTools(){
       if (k==='tie') on = p.tie; else if (k==='slurS') on = p.slurOpen > 0; else if (k==='slurE') on = p.slurClose > 0;
       else on = p.decos.includes(k) || (k==='<(' && p.decos.includes('crescendo(')) || (k==='<)' && p.decos.includes('crescendo)')) || (k==='>(' && p.decos.includes('diminuendo(')) || (k==='>)' && p.decos.includes('diminuendo)'));
     }
-    b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.disabled = !has;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.disabled = !has && !markCustom;
   });
   const clr = document.querySelector('#tMarks .chip.clear'); if (clr) clr.disabled = !has;
+  applyMarkVis();
   $('#chordIn').disabled = !has; $('#chordApply').disabled = !has; $('#chordDel').disabled = !has || !p.chords.length;
   document.querySelectorAll('#chordChips .chip').forEach(b => { b.disabled = !has; b.setAttribute('aria-pressed', p && p.chords[0] && transposeChordName(p.chords[0], viewSt(), viewFlat()) === b.textContent ? 'true' : 'false'); });
   if (document.activeElement !== $('#chordIn')) $('#chordIn').value = p && p.chords[0] ? transposeChordName(p.chords[0], viewSt(), viewFlat()) : '';
