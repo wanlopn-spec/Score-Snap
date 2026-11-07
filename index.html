@@ -204,6 +204,15 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .ntype button small{font-weight:400;font-size:.72rem;opacity:.85}
 .ntype button[aria-pressed=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
 .aupanel audio{width:100%;height:40px}
+.au-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.ai-item{display:grid;gap:2px;align-content:start;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));min-width:0}
+.ai-item span{font-size:.72rem;color:var(--ink-2);font-weight:600}
+.ai-item b{font:700 1.3rem/1.15 var(--font);color:var(--accent);overflow-wrap:anywhere}
+.ai-item small{font-size:.72rem;color:var(--ink-2)}
+.ai-alt{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.ai-alt button{min-height:24px;padding:0 8px;border-radius:99px;font:600 .68rem var(--mono)}
+.ai-alt button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
+.au-info.busy b{opacity:.35}
 .au-range{display:flex;align-items:center;gap:6px}
 .au-range input{width:6em}
 .au-stems{display:grid;gap:8px}
@@ -632,6 +641,12 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
       <div class="thaipanel aupanel" id="audioPanel" hidden>
         <div class="thai-h"><b>ไฟล์เสียง → โน้ตเพลง</b><span id="auName">แยกเป็นโน้ตทีละแนว หรือแยกเสียงเครื่องดนตรีออกเป็นไฟล์</span></div>
         <audio id="auPlayer" controls preload="metadata"></audio>
+        <div class="au-info" id="auInfo" hidden aria-live="polite">
+          <div class="ai-item"><span>ความเร็ว</span><b id="aiBpm">–</b><small>BPM</small><div class="ai-alt" id="aiAlt"></div></div>
+          <div class="ai-item"><span>คีย์</span><b id="aiKey">–</b><small id="aiKeyTh"></small></div>
+          <div class="ai-item"><span>อัตราจังหวะ</span><b id="aiMeter">–</b><small id="aiMeterTh"></small></div>
+          <div class="ai-item"><span>ความยาว</span><b id="aiBars">–</b><small id="aiLen"></small></div>
+        </div>
         <div class="thai-opts">
           <label class="field">วิธีแยก
             <select id="auMode">
@@ -1648,12 +1663,12 @@ const A2N = (() => {
     return r.stems;                                   // { vocals, drums, bass, other }: [L, R]
   }
   /* ---- tempo: autocorrelation of the onset train, a mild preference near 110 BPM ---- */
-  function tempo(notes, dur){
-    if (notes.length < 4) return { bpm: 100, phase: 0 };
+  function tempo(notes, dur, fixed){
+    if (notes.length < 4) return { bpm: fixed || 100, phase: 0 };
     const R = 100, n = Math.ceil(dur * R) + 1, env = new Float32Array(n);
     for (const x of notes){ const i = Math.round(x.t * R); for (let k = -2; k <= 2; k++){ const j = i + k; if (j >= 0 && j < n) env[j] += x.a * Math.exp(-k * k / 2); } }
-    let best = 0, bestBpm = 100;
-    for (let bpm = 50; bpm <= 200; bpm += .5){
+    let best = 0, bestBpm = fixed || 100;
+    if (!fixed) for (let bpm = 50; bpm <= 200; bpm += .5){
       const L = R * 60 / bpm; let s = 0;
       for (const mul of [1, 2]){ const lag = L * mul, li = Math.floor(lag), fr = lag - li; for (let i = 0; i + li + 1 < n; i++) s += env[i] * (env[i + li] * (1 - fr) + env[i + li + 1] * fr) / mul; }
       s *= Math.exp(-Math.pow(Math.log2(bpm / 110), 2) / (2 * .55 * .55));
@@ -1807,6 +1822,90 @@ const A2N = (() => {
   return { LIB, decode, clip, toMono22k, transcribe, separate, tempo, key, keySig, quantize, downbeat, split, mono, chords, build, wav };
 })();
 
+/* ---------- Song analysis straight from the audio: tempo (BPM), key, metre, number of bars ---------- */
+const SONG = (() => {
+  function fft(re, im){
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++){ let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j){ [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+    for (let len = 2; len <= n; len <<= 1){
+      const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+      for (let i = 0; i < n; i += len){ let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++){ const p = i + k, q = p + len / 2, tr = re[q] * cr - im[q] * ci, ti = re[q] * ci + im[q] * cr; re[q] = re[p] - tr; im[q] = im[p] - ti; re[p] += tr; im[p] += ti; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+    }
+  }
+  async function mono(buf, sr){
+    const oc = new OfflineAudioContext(1, Math.ceil(buf.duration * sr), sr), s = oc.createBufferSource();
+    s.buffer = buf; s.connect(oc.destination); s.start(); return (await oc.startRendering()).getChannelData(0);
+  }
+  const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function corr(h, prof, r){ const ys = prof.map((_, i) => prof[(i - r + 12) % 12]), mx = h.reduce((a, b) => a + b) / 12, my = ys.reduce((a, b) => a + b) / 12; let s = 0, sx = 0, sy = 0; for (let i = 0; i < 12; i++){ s += (h[i] - mx) * (ys[i] - my); sx += (h[i] - mx) ** 2; sy += (ys[i] - my) ** 2; } return s / Math.sqrt(sx * sy || 1); }
+  async function analyze(buf, onPct){
+    const sr = 11025, x = await mono(buf, sr), N = 2048, H = 256, fps = sr / H, nf = Math.max(1, Math.floor((x.length - N) / H));
+    const win = new Float32Array(N).map((_, i) => .5 - .5 * Math.cos(2 * Math.PI * i / N));
+    const flux = new Float32Array(nf), chroma = new Float64Array(12), bassC = new Float64Array(12), bins = N / 2;
+    const pcOf = new Int8Array(bins).fill(-1), isBass = new Uint8Array(bins);
+    for (let k = 1; k < bins; k++){ const f = k * sr / N; if (f >= 55 && f <= 1800){ const mf = 12 * Math.log2(f / 440) + 69; if (Math.abs(mf - Math.round(mf)) < .35) pcOf[k] = ((Math.round(mf) % 12) + 12) % 12; isBass[k] = f < 200 ? 1 : 0; } }
+    const fr = new Float64Array(12), fb = new Float64Array(12), mag = new Float64Array(bins);
+    let prev = new Float32Array(bins), re = new Float64Array(N), im = new Float64Array(N), energy = new Float32Array(nf);
+    for (let f = 0; f < nf; f++){
+      const o = f * H; for (let i = 0; i < N; i++){ re[i] = x[o + i] * win[i]; im[i] = 0; }
+      fft(re, im);
+      let fl = 0, en = 0;
+      for (let k = 1; k < bins; k++){ const m = Math.sqrt(re[k] * re[k] + im[k] * im[k]), lm = Math.log1p(100 * m); const d = lm - prev[k]; if (d > 0) fl += d; prev[k] = lm; en += m; mag[k] = m; }
+      flux[f] = fl; energy[f] = en;
+      if (f % 2 === 0){
+        // pitch classes from spectral peaks only, each peak minus the overtone it would be of a note an octave/twelfth below
+        fr.fill(0); fb.fill(0);
+        for (let k = 2; k < bins - 1; k++){
+          if (pcOf[k] < 0 || mag[k] <= mag[k - 1] || mag[k] < mag[k + 1]) continue;
+          let v = Math.sqrt(mag[k]);
+          const k2 = Math.round(k / 2), k3 = Math.round(k / 3);
+          if (k2 > 1 && mag[k2] > mag[k] * .6) v *= .45;            // probably the 2nd harmonic of k/2
+          else if (k3 > 1 && mag[k3] > mag[k] * .6) v *= .35;       // probably the 3rd harmonic (a fifth above)
+          (isBass[k] ? fb : fr)[pcOf[k]] += v;
+        }
+        let a1 = 0, a2 = 0; for (let i = 0; i < 12; i++){ a1 = Math.max(a1, fr[i]); a2 = Math.max(a2, fb[i]); }
+        if (a1 > 0) for (let i = 0; i < 12; i++) chroma[i] += fr[i] / a1;
+        if (a2 > 0) for (let i = 0; i < 12; i++) bassC[i] += fb[i] / a2;
+      }
+      if (onPct && f % 2000 === 0){ onPct(f / nf); await new Promise(r => setTimeout(r)); }
+    }
+    // onset envelope: flux minus its local mean, half-wave rectified
+    const env = new Float32Array(nf), W = Math.round(fps * .5);
+    let acc = 0; for (let i = 0; i < nf; i++){ acc += flux[i]; if (i >= W) acc -= flux[i - W]; const mean = acc / Math.min(i + 1, W); env[i] = Math.max(0, flux[i] - mean); }
+    // tempo: autocorrelation of the envelope, scored with its double and a mild prior near 110 BPM
+    const ac = lag => { const li = Math.floor(lag), fr = lag - li; let s = 0; for (let i = 0; i + li + 1 < nf; i++) s += env[i] * (env[i + li] * (1 - fr) + env[i + li + 1] * fr); return s; };
+    const cand = [];
+    for (let bpm = 55; bpm <= 210; bpm += .5){ const L = fps * 60 / bpm; const s = (ac(L) + .5 * ac(2 * L) + .25 * ac(4 * L)) * Math.exp(-Math.pow(Math.log2(bpm / 110), 2) / (2 * .6 * .6)); cand.push([bpm, s]); }
+    cand.sort((a, b) => b[1] - a[1]);
+    const bpm = Math.round(cand[0][0]), T = fps * 60 / bpm;
+    const conf = Math.min(1, Math.max(0, (cand[0][1] - cand[Math.min(40, cand.length - 1)][1]) / (cand[0][1] || 1)));
+    // metre: does the music repeat every 3 or every 4 beats (and 2/4 vs 4/4 by the half-bar)
+    const s3 = ac(3 * T) + ac(6 * T), s4 = ac(4 * T) + ac(8 * T), s2 = ac(2 * T);
+    const beats = s3 > s4 * 1.12 ? 3 : 4;
+    // key from the long-term chroma
+    // key: profile match of the whole chroma, plus how much the bass rests on the key's tonic (and its fifth)
+    const cs = chroma.reduce((x, y) => x + y) || 1, bs = bassC.reduce((x, y) => x + y) || 1;
+    const h = [...chroma].map(v => v / cs), hb = [...bassC].map(v => v / bs);
+    let best = { r: 0, minor: false, c: -9 }, second = -9; const score = {};
+    for (let r = 0; r < 12; r++) for (const [prof, minor] of [[MAJ, false], [MIN, true]]){
+      const c = corr(h, prof, r) + .6 * corr(hb, prof, r) + 1.5 * (hb[r] - 1 / 12) + .5 * (hb[(r + 7) % 12] - 1 / 12);
+      score[r + (minor ? 'm' : '')] = c;
+      if (c > best.c){ second = best.c; best = { r, minor, c }; } else if (c > second) second = c;
+    }
+    // the relative key (same key signature) when it scores almost as well
+    const rel = best.minor ? { r: (best.r + 3) % 12, minor: false } : { r: (best.r + 9) % 12, minor: true };
+    rel.c = score[rel.r + (rel.minor ? 'm' : '')];
+    const relKey = best.c - rel.c < .15 ? rel : null;
+    // where the music starts and ends (above 5% of the loudest energy)
+    let mx = 0; for (const e of energy) mx = Math.max(mx, e);
+    let a = 0, b = nf - 1; while (a < nf && energy[a] < mx * .05) a++; while (b > a && energy[b] < mx * .05) b--;
+    const start = a / fps, end = (b + 1) / fps + N / sr, music = Math.max(0, end - start);
+    const bars = Math.max(1, Math.round(music * bpm / 60 / beats));
+    return { bpm, conf, beats, key: best, relKey, keyConf: best.c - second, duration: buf.duration, start, end, music, bars, s2, s4 };
+  }
+  return { analyze };
+})();
+
 /* audio panel */
 const AU = { file: null, buf: null, stems: null, stemSr: 44100, busy: false, stop: false, url: '' };
 const STEM_NAMES = { vocals: 'เสียงร้อง (Vocals)', bass: 'เบส (Bass)', other: 'เครื่องดนตรีอื่น (Other)', drums: 'กลอง (Drums)' };
@@ -1824,11 +1923,38 @@ async function openAudio(f){
     AU.buf = await A2N.decode(await f.arrayBuffer());
     const d = AU.buf.duration; $('#auTo').max = Math.ceil(d); $('#auFrom').max = Math.floor(d);
     $('#auFrom').value = 0; $('#auTo').value = Math.min(Math.ceil(d), IOS || /Android/i.test(navigator.userAgent) ? 30 : 90);
-    auStatus('ความยาว ' + fmtTime(d) + ' · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"', 'ok');
+    auStatus('กำลังวิเคราะห์ความเร็ว คีย์ และจำนวนห้องของเพลง…', '', 0);
+    AU.song = null; $('#auBpm').value = ''; showSong(null);
+    try{ AU.song = await SONG.analyze(AU.buf, p => auStatus('กำลังวิเคราะห์ความเร็ว คีย์ และจำนวนห้องของเพลง… ' + Math.round(p * 100) + '%', '', p)); }catch(e){ AU.song = null; }
+    if (AU.file !== f) return;
+    if (AU.song){ $('#auBpm').value = AU.song.bpm; $('#auMeter').value = String(AU.song.beats); }
+    showSong(AU.song);
+    auStatus(AU.song ? 'วิเคราะห์เพลงแล้ว · ถ้าความเร็วดูเร็วหรือช้าไป 2 เท่า กดตัวเลือกใต้ BPM · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"' : 'ความยาว ' + fmtTime(d) + ' · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"', 'ok');
   }catch(e){ AU.buf = null; auStatus('เปิดไฟล์เสียงนี้ไม่ได้ ลองไฟล์ .mp3 .wav หรือ .m4a', 'err'); }
   $('#audioPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 $('#pickAudio').addEventListener('change', e => { const f = e.target.files[0]; if (f) openAudio(f); e.target.value = ''; });
+const KEY_TH = (k) => { const n = A2N.keySig(k).name.replace(/m$/, ''); return { en: n + (k.minor ? ' minor' : ' major'), th: n + (k.minor ? ' ไมเนอร์' : ' เมเจอร์') }; };
+function sigText(k){ const ks = A2N.keySig(k), n = Object.values(ks.sig).filter(Boolean).length; return n ? n + (ks.flat ? ' ♭' : ' ♯') : 'ไม่มีชาร์ป/แฟลต'; }
+function showSong(sg){
+  const box = $('#auInfo'); box.hidden = false; box.classList.toggle('busy', !sg);
+  if (!sg){ ['aiBpm', 'aiKey', 'aiMeter', 'aiBars'].forEach(id => $('#' + id).textContent = '…'); ['aiKeyTh', 'aiMeterTh', 'aiLen'].forEach(id => $('#' + id).textContent = ''); $('#aiAlt').textContent = ''; return; }
+  const bpm = +$('#auBpm').value || sg.bpm, beats = +$('#auMeter').value || sg.beats, kn = KEY_TH(sg.key);
+  $('#aiBpm').textContent = bpm; $('#aiKey').textContent = kn.en;
+  $('#aiKeyTh').textContent = kn.th + ' · ' + sigText(sg.key) + (sg.relKey ? ' · หรือ ' + KEY_TH(sg.relKey).en + ' (คีย์คู่ ใช้เครื่องหมายเดียวกัน)' : '');
+  $('#aiMeter').textContent = beats + '/4'; $('#aiMeterTh').textContent = beats === 3 ? 'จังหวะ 3 (เช่น วอลซ์)' : beats === 2 ? 'จังหวะ 2' : 'จังหวะ 4';
+  const bars = Math.max(1, Math.round(sg.music * bpm / 60 / beats));
+  const [a, b] = auRange(), sel = Math.max(1, Math.round(Math.max(0, Math.min(b, sg.end) - Math.max(a, sg.start)) * bpm / 60 / beats));
+  $('#aiBars').textContent = bars + ' ห้อง'; $('#aiLen').textContent = 'ทั้งเพลง ' + fmtTime(sg.duration) + ' · ช่วงที่เลือก ≈ ' + sel + ' ห้อง';
+  const alt = $('#aiAlt'); alt.textContent = '';
+  [Math.round(sg.bpm / 2), sg.bpm, Math.round(sg.bpm * 2)].filter(v => v >= 30 && v <= 240).forEach(v => {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = v === sg.bpm ? v : (v < sg.bpm ? '½ ' : '2× ') + v; btn.setAttribute('aria-pressed', v === bpm ? 'true' : 'false');
+    btn.title = 'ใช้ความเร็ว ' + v + ' BPM'; btn.onclick = () => { $('#auBpm').value = v; showSong(sg); };
+    alt.append(btn);
+  });
+}
+['#auBpm', '#auMeter', '#auFrom', '#auTo'].forEach(id => $(id).addEventListener('input', () => { if (AU.song) showSong(AU.song); }));
+$('#auMeter').addEventListener('change', () => { if (AU.song) showSong(AU.song); });
 function auRange(){
   const d = AU.buf.duration, a = Math.max(0, Math.min(d - .5, +$('#auFrom').value || 0)), b = Math.max(a + .5, Math.min(d, +$('#auTo').value || d));
   return [a, b];
@@ -1891,8 +2017,8 @@ async function auRun(notate){
       parts = [{ raw: notes, all: true }];
     }
     if (!allNotes.length) throw new Error('nonotes');
-    const tm = A2N.tempo(allNotes, b - a), bpm = +$('#auBpm').value || tm.bpm;
-    const phase = $('#auBpm').value ? (A2N.tempo(allNotes, b - a), tm.phase) : tm.phase;
+    const fixed = +$('#auBpm').value || 0, tm = A2N.tempo(allNotes, b - a, fixed || undefined), bpm = fixed || tm.bpm;
+    const phase = tm.phase;
     let ph = phase; const first = allNotes.reduce((m, n) => Math.min(m, n.t), Infinity); const T = 60 / bpm; while (ph > first + .02) ph -= T;
     const g = { u: T / sub, phase: ph };
     g.shift = A2N.downbeat(allNotes, g, beats, sub);
@@ -1907,7 +2033,7 @@ async function auRun(notate){
       if (bassP && voc) voc.notes = voc.notes.filter(n => n.p >= 52 || !hit(n, [bassP]));
     }
     else shaped = A2N.split(A2N.quantize(parts[0].raw, g), mode);
-    const k = A2N.key(allNotes);
+    const k = AU.song && AU.song.keyConf > .02 ? AU.song.key : A2N.key(allNotes);
     const abc = A2N.build(shaped, { sub, beats, bpm, key: k, title: baseName0(AU.file.name), mode });
     stopPlay(); tsel.value = '0';
     applyAbc(abc, 'แปลงจากไฟล์เสียง');
