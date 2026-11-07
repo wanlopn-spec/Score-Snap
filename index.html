@@ -653,7 +653,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         </div>
         <div class="thai-opts">
           <div class="field">แยกเป็น
-            <div class="au-parts"><span>🎵 เดี่ยว <small>(Melody)</small></span><span>🎹 คอร์ด <small>(Chords + ชื่อคอร์ด)</small></span></div>
+            <div class="au-parts"><span>🎵 ทำนอง <small>(Melody)</small></span><span>🎸 ชื่อคอร์ด <small>(เขียนเหนือทำนอง)</small></span></div>
             <input type="hidden" id="auMode" value="lead">
           </div>
           <label class="field">ช่วงเวลา (วินาที)
@@ -1740,7 +1740,7 @@ const A2N = (() => {
       // a short low "note" is usually a kick drum, not bass: keep low notes that last at least a beat
       const drumLike = n => n.p < 48 && (n.e - n.s) < (split.sub || 2);
       const acc = chords(notes.filter(n => !ms.has(n.s + ':' + n.p) && n.p >= 33 && n.p < 84 && !drumLike(n)), 4);
-      return [{ name: 'Melody', prog: 0, clef: 'treble', notes: melody, lead: true }, { name: 'Chords', prog: 0, clef: 'auto', notes: acc, chordPart: true }];
+      return [{ name: 'Melody', prog: 0, clef: 'treble', notes: melody, lead: true }, { name: 'Chords', prog: 0, clef: 'auto', notes: acc, chordPart: true, hidden: true }];
     }
     const melody = mono(notes.filter(n => n.p >= 57), 'high');
     const mset = new Set(melody.map(n => n.s + ':' + n.p));
@@ -1822,12 +1822,12 @@ const A2N = (() => {
     const sub = o.sub, barLen = o.beats * sub, ks = keySig(o.key);
     const allNotes = parts.flatMap(p => p.notes), total0 = allNotes.reduce((m, n) => Math.max(m, n.e), 0);
     const total = Math.ceil(total0 / barLen) * barLen || barLen;
-    const used = parts.filter(p => p.notes.length);
+    const used = parts.filter(p => p.notes.length && !p.hidden);   // a hidden part only feeds the chord names
     const L = sub === 4 ? '1/16' : '1/8';
     const head = ['X:1', 'T:' + (o.title || 'Audio'), 'C:แปลงจากไฟล์เสียง', 'M:' + o.beats + '/4', 'L:' + L, 'Q:1/4=' + o.bpm, 'K:' + ks.name];
     const accP = parts.find(p => p.chordPart), leadP = used.find(p => p.lead);
     const syms = accP && leadP ? chordNames(accP.notes, leadP.notes, total, barLen, o.beats, sub, ks) : null;
-    if (syms && syms.size) head.splice(1, 0, '%ss-gchord off');   // chord names are shown; the Chords part plays them
+    if (syms && syms.size && used.some(p => p.chordPart)) head.splice(1, 0, '%ss-gchord off');   // only when a written Chords part already plays them
     const bodies = used.map(p => {
       const med = p.notes.map(n => n.p).sort((a, b) => a - b)[p.notes.length >> 1] || 60;
       const clef = p.clef === 'auto' ? (med < (p.chordPart ? 62 : 57) ? 'bass' : 'treble') : p.clef;
@@ -2079,7 +2079,7 @@ async function auRun(notate){
     applyAbc(abc, 'แปลงจากไฟล์เสียง');
     const nParts = shaped.filter(p => p.notes.length).length, nNotes = shaped.reduce((s, p) => s + p.notes.length, 0);
     const skip = mode === 'stems' && AU.skipped && AU.skipped.length ? ' · ไม่ได้ใส่ ' + AU.skipped.join(', ') + ' เพราะแทบไม่มีเสียง' : '';
-    auStatus('เขียนโน้ตแล้ว ' + (mode === 'lead' ? 'แนวเดี่ยวและคอร์ด' + (bo.chordCount ? ' พร้อมชื่อคอร์ด ' + bo.chordCount + ' จุด' : '') : nParts + ' แนว') + ' · ' + nNotes + ' ตัวโน้ต' + skip + ' · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
+    auStatus('เขียนโน้ตแล้ว ' + (mode === 'lead' ? 'ทำนอง' + (bo.chordCount ? ' พร้อมชื่อคอร์ด ' + bo.chordCount + ' จุด' : '') : nParts + ' แนว') + ' · ' + nNotes + ' ตัวโน้ต' + skip + ' · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
     setTimeout(() => paper.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 300);
   }catch(e){
     const m = String(e && e.message || e);
@@ -2295,7 +2295,7 @@ function drawMixer(){
     const chans = el('div', 'chans');
     trackInfo.forEach((ti, i) => {
       const key = ti.track, m = () => mixOf(key), vid = ids[key] ?? (key + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
-      const label = trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'Instrument';
+      const label = trackLabel(ti, ids);
       const s = el('div', 'strip'); s.dataset.t = key; s.style.setProperty('--c', STRIP_COLORS[i % STRIP_COLORS.length]);
       const nm = el('div', 'st-name', label); nm.title = label;
       const inst = el('div', 'st-inst', instLabel(ti)); inst.title = instLabel(ti) + (ti.thai && !THAI_BY[ti.thai].my ? ' · ' + THAI_BY[ti.thai].th : '');
@@ -2395,7 +2395,7 @@ function drawVoiceRows(){
     const lab = document.createElement('label'), sel = document.createElement('select');
     sel.id = 'prog-' + ti.track;
     const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
-    lab.append(trackInfo.length>1 ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : 'Instrument', sel);
+    lab.append(trackLabel(ti, ids, true), sel);
     const thaiGroup = document.createElement('optgroup'); thaiGroup.label = 'Thai instruments · เครื่องดนตรีไทย';
     THAI_INST.forEach(x => { const o = document.createElement('option'); o.value = 't:' + x.key; o.textContent = x.en + ' · ' + x.th; thaiGroup.append(o); });
     const mine = MY_INST.filter(x => (THAI_SND.user[x.key] || []).length || ti.thai === x.key);
@@ -2445,7 +2445,21 @@ function writeProgram(lines, track, p, thai){
   lines.splice(at + 1, 0, '%%MIDI program ' + p, ...(thai ? ['%ss-thai ' + thai] : []));
   return true;
 }
+// the accompaniment abcjs plays from chord names is an extra track after the written voices
+const isChordTrack = t => t >= Math.max(1, voiceIds().length) && /"[A-G][^"]*"/.test(ta.value) && !/^%ss-gchord\s+off/m.test(ta.value);
+function trackLabel(ti, ids, rows){
+  if (isChordTrack(ti.track)) return rows ? 'Chords · ดนตรีประกอบจากชื่อคอร์ด' : 'Chords';
+  const real = trackInfo.filter(t => !isChordTrack(t.track)).length;
+  if (real <= 1) return trackInfo.length > 1 ? 'Melody' : 'Instrument';
+  const vid = ids[ti.track] ?? (ti.track + 1), vn = voiceName(vid);
+  return rows ? 'Voice ' + vid + (vn ? ' · ' + vn : '') : (vn || 'Voice ' + vid);
+}
 function setProgram(track, p, thai){
+  if (isChordTrack(track)){                         // instrument of the chord-name accompaniment
+    const L = ta.value.split('\n').filter(l => !/^%%MIDI\s+chordprog\b/.test(l)), k = L.findIndex(l => /^K:/.test(l));
+    L.splice(k < 0 ? L.length : k + 1, 0, '%%MIDI chordprog ' + p);
+    ta.value = L.join('\n'); sel = null; if (isExample) setBadge('แก้ไขแล้ว', false); render(); updateSelLabel(); previewInst(p, ''); return;
+  }
   ta.value = normalizeVoices(ta.value);
   const lines = ta.value.split('\n');
   if (!writeProgram(lines, track, p, thai)) return;
@@ -2465,7 +2479,7 @@ function previewInst(p, thai){
 function setBand(key){
   const list = (THAI_BANDS.find(x => x[0] === key) || [])[2]; if (!list) return;
   ta.value = normalizeVoices(ta.value);
-  const lines = ta.value.split('\n'), tracks = trackInfo.map(t => t.track);
+  const lines = ta.value.split('\n'), tracks = trackInfo.map(t => t.track).filter(t => !isChordTrack(t));
   tracks.forEach((t, i) => { const x = THAI_BY[list[i % list.length]]; writeProgram(lines, t, x.gm, x.key); });
   ta.value = lines.join('\n'); sel = null;
   if (isExample) setBadge('แก้ไขแล้ว', false);
@@ -2515,11 +2529,12 @@ function drawRecUse(){
   const btn = (label, on, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = label; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.onclick = fn; box.append(b); };
   trackInfo.forEach(ti => {
     const vid = ids[ti.track] ?? (ti.track + 1), vn = trackInfo.length > 1 ? voiceName(vid) : '';
-    btn(trackInfo.length > 1 ? (vn || 'Voice ' + vid) : 'โน้ตทั้งเพลง', ti.thai === key, () => { setProgram(ti.track, THAI_BY[key].gm, ti.thai === key ? '' : key); });
+    if (isChordTrack(ti.track)) return;
+    btn(trackInfo.length > 1 ? trackLabel(ti, ids) : 'โน้ตทั้งเพลง', ti.thai === key, () => { setProgram(ti.track, THAI_BY[key].gm, ti.thai === key ? '' : key); });
   });
   if (trackInfo.length > 1) btn('ทุกแนว', trackInfo.every(t => t.thai === key), () => {
     ta.value = normalizeVoices(ta.value); const L = ta.value.split('\n');
-    trackInfo.forEach(t => writeProgram(L, t.track, THAI_BY[key].gm, key));
+    trackInfo.filter(t => !isChordTrack(t.track)).forEach(t => writeProgram(L, t.track, THAI_BY[key].gm, key));
     ta.value = L.join('\n'); sel = null; if (isExample) setBadge('แก้ไขแล้ว', false); render(); updateSelLabel(); previewInst(THAI_BY[key].gm, key);
   });
 }
