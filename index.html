@@ -203,6 +203,7 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .ntype button{flex:1 1 120px;border:0;background:transparent;border-radius:10px;flex-direction:column;gap:2px;min-height:46px;color:var(--ink-2);font-weight:600}
 .ntype button small{font-weight:400;font-size:.72rem;opacity:.85}
 .ntype button[aria-pressed=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
+.scan.src-audio :is(#nType,#passBox,#apiBox,#hint-field,#optsWrap,#thaiPanel,#scanStatus,#steps,#prepWrap){display:none!important}
 .aupanel audio{width:100%;height:40px}
 .au-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
 .ai-item{display:grid;gap:2px;align-content:start;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));min-width:0}
@@ -590,7 +591,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
   <div class="desk">
     <!-- Step 1: scan -->
     <section class="card scan" aria-labelledby="scan-h">
-      <div class="card-h"><div class="t"><span class="num">1</span><div><h2 id="scan-h">สแกนโน้ตเพลง</h2><p class="sub" id="scan-sub">AI อ่านโน้ตจากรูปให้เป็นโน้ตที่แก้ไขได้</p></div></div></div>
+      <div class="card-h"><div class="t"><span class="num">1</span><div><h2 id="scan-h">แปลงเป็นโน้ตสากล</h2><p class="sub" id="scan-sub">เลือกรูปโน้ต PDF หรือไฟล์เสียง แล้วกดปุ่มเดียว</p></div></div></div>
 
       <div class="startbox" id="startBox" hidden>
         <button class="start-opt primary" id="startImport" type="button"><svg class="i"><use href="#i-upload"/></svg><span><b>นำเข้าไฟล์ MusicXML</b><small>จาก MuseScore, Sibelius, StaffPad (.musicxml .xml .mxl)</small></span></button>
@@ -613,11 +614,11 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
 
       <div class="drop" id="drop">
         <div class="drop-ico"><svg class="i"><use href="#i-scan"/></svg></div>
-        <div><strong>ถ่ายรูป หรือเลือกรูป / PDF โน้ต</strong><p id="dropHint">ลากรูปหรือไฟล์ PDF มาวาง หรือกด Ctrl+V · หลายหน้าได้</p></div>
+        <div><strong>ถ่ายรูป หรือเลือกไฟล์</strong><p id="dropHint">รูปโน้ต · PDF · ไฟล์เสียงเพลง (mp3 wav m4a) · ลากมาวางหรือกด Ctrl+V ก็ได้</p></div>
         <div class="row">
           <label class="btn primary"><svg class="i"><use href="#i-camera"/></svg>ถ่ายรูป<input id="cam" type="file" accept="image/*" capture="environment"></label>
-          <label class="btn"><svg class="i"><use href="#i-image"/></svg>เลือกรูป / PDF<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
-          <label class="btn"><svg class="i"><use href="#i-volume"/></svg>ไฟล์เสียง<input id="pickAudio" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff"></label>
+          <label class="btn"><svg class="i"><use href="#i-image"/></svg>เลือกไฟล์<input id="pick" type="file" accept="image/*,application/pdf,.pdf,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff" multiple></label>
+          <input id="pickAudio" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff" hidden>
         </div>
       </div>
       <div class="thumbs" id="thumbs"></div>
@@ -669,9 +670,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
           </label>
         </div>
         <div class="row">
-          <button class="primary" id="auGo" type="button">แปลงเป็นโน้ต</button>
           <button id="auStemsOnly" type="button">แยกเสียงเครื่องดนตรีเป็นไฟล์</button>
-          <button id="auStop" type="button" hidden>หยุด</button>
         </div>
         <div class="bar" id="auBarW" hidden><i id="auBar"></i></div>
         <div class="status" id="auStatus" aria-live="polite"></div>
@@ -725,7 +724,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
       </details>
 
       <div class="read-row">
-        <button class="primary" id="readBtn" disabled><svg class="i"><use href="#i-sparkle"/></svg>อ่านโน้ตจากรูป</button>
+        <button class="primary" id="readBtn" disabled><svg class="i"><use href="#i-sparkle"/></svg><span id="goLabel">แปลงเป็นโน้ตสากล</span></button>
         <button id="stopRead" hidden>หยุด</button>
       </div>
       <div class="steps" id="steps" hidden></div>
@@ -1915,7 +1914,7 @@ function auStatus(msg, cls, pct){
   $('#auBarW').hidden = pct == null; if (pct != null) $('#auBar').style.width = Math.round(pct * 100) + '%';
 }
 async function openAudio(f){
-  AU.file = f; AU.stems = null; $('#auStems').hidden = true; $('#auStems').textContent = '';
+  setSource('audio'); AU.file = f; AU.stems = null; AU.buf = null; setGo(); $('#auStems').hidden = true; $('#auStems').textContent = '';
   $('#audioPanel').hidden = false; $('#auName').textContent = f.name;
   if (AU.url) URL.revokeObjectURL(AU.url); AU.url = URL.createObjectURL(f); $('#auPlayer').src = AU.url;
   auStatus('กำลังเปิดไฟล์เสียง…', '', 0);
@@ -1927,9 +1926,10 @@ async function openAudio(f){
     AU.song = null; $('#auBpm').value = ''; showSong(null);
     try{ AU.song = await SONG.analyze(AU.buf, p => auStatus('กำลังวิเคราะห์ความเร็ว คีย์ และจำนวนห้องของเพลง… ' + Math.round(p * 100) + '%', '', p)); }catch(e){ AU.song = null; }
     if (AU.file !== f) return;
+    setGo();
     if (AU.song){ $('#auBpm').value = AU.song.bpm; $('#auMeter').value = String(AU.song.beats); }
     showSong(AU.song);
-    auStatus(AU.song ? 'วิเคราะห์เพลงแล้ว · ถ้าความเร็วดูเร็วหรือช้าไป 2 เท่า กดตัวเลือกใต้ BPM · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"' : 'ความยาว ' + fmtTime(d) + ' · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"', 'ok');
+    auStatus(AU.song ? 'วิเคราะห์เพลงแล้ว · ถ้าความเร็วดูเร็วหรือช้าไป 2 เท่า กดตัวเลือกใต้ BPM · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ตสากล" ด้านล่าง' : 'ความยาว ' + fmtTime(d) + ' · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ตสากล" ด้านล่าง', 'ok');
   }catch(e){ AU.buf = null; auStatus('เปิดไฟล์เสียงนี้ไม่ได้ ลองไฟล์ .mp3 .wav หรือ .m4a', 'err'); }
   $('#audioPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
@@ -1977,7 +1977,7 @@ function stemRows(){
 const baseName0 = n => (n || 'audio').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60);
 async function auRun(notate){
   if (!AU.buf || AU.busy) return;
-  AU.busy = true; AU.stop = false; $('#auGo').disabled = $('#auStemsOnly').disabled = true; $('#auStop').hidden = false;
+  AU.busy = true; AU.stop = false; $('#auStemsOnly').disabled = true; $('#stopRead').hidden = false; setGo();
   const mode = notate ? $('#auMode').value : 'stems', [a, b] = auRange(), sub = +$('#auGrid').value, beats = +$('#auMeter').value;
   const halt = () => { if (AU.stop) throw new Error('stopped'); };
   try{
@@ -1996,7 +1996,7 @@ async function auRun(notate){
         AU.stemSr = sr; AU.stemsRange = a + '-' + b; halt();
         stemRows();
       }
-      if (!notate){ auStatus('แยกเสียงเสร็จแล้ว ฟังหรือดาวน์โหลดแต่ละแนวได้ด้านล่าง · กด "แปลงเป็นโน้ต" เพื่อเขียนโน้ตจากแต่ละแนว', 'ok'); return; }
+      if (!notate){ auStatus('แยกเสียงเสร็จแล้ว ฟังหรือดาวน์โหลดแต่ละแนวได้ด้านล่าง · กด "แปลงเป็นโน้ตสากล" เพื่อเขียนโน้ตจากแต่ละแนว', 'ok'); return; }
       const want = [...document.querySelectorAll('#auStems input[data-stem]')].filter(x => x.checked).map(x => x.dataset.stem);
       const plan = { vocals: { name: 'Vocals', prog: 53, clef: 'treble', kind: 'high' }, other: { name: 'Instruments', prog: 0, clef: 'auto', kind: 'chords' }, bass: { name: 'Bass', prog: 32, clef: 'bass', kind: 'low', opt: { maxHz: 400 } } };
       // leave out a part that is nearly silent (only bleed from the others)
@@ -2049,12 +2049,10 @@ async function auRun(notate){
     else if (mode === 'stems') auStatus('แยกเครื่องดนตรีไม่สำเร็จ (' + m.slice(0, 120) + ') · ต้องต่ออินเทอร์เน็ตตอนโหลดโมเดลครั้งแรก และหน่วยความจำต้องพอ ลองช่วงเวลาสั้นลง หรือเปิดจากเว็บ GitHub / แอปที่ติดตั้งบนคอมพิวเตอร์', 'err');
     else auStatus('แปลงไม่สำเร็จ (' + m.slice(0, 120) + ') · ต้องต่ออินเทอร์เน็ตตอนใช้ครั้งแรก', 'err');
   }finally{
-    AU.busy = false; $('#auGo').disabled = $('#auStemsOnly').disabled = false; $('#auStop').hidden = true; $('#auBarW').hidden = true;
+    AU.busy = false; $('#auStemsOnly').disabled = false; $('#stopRead').hidden = true; $('#auBarW').hidden = true; setGo();
   }
 }
-$('#auGo').addEventListener('click', () => auRun(true));
 $('#auStemsOnly').addEventListener('click', () => auRun(false));
-$('#auStop').addEventListener('click', () => { AU.stop = true; auStatus('กำลังหยุด…', ''); });
 
 /* ---------- Mix console: per-voice fader, pan, reverb/delay sends, mute, solo + FX returns + master ---------- */
 const MIX_DEF = () => ({ master: 80, tracks: {}, fx: { rev: { size: 'hall', ret: 80 }, dly: { time: '8', fb: 35, ret: 70 } } });
@@ -2792,7 +2790,7 @@ async function openPdf(f){
     return;
   }
   const total = doc.numPages;
-  if (total <= room){ await renderPdf(doc, 1, total, f.name); doc.destroy(); setScan('เพิ่ม ' + f.name + ' ' + total + ' หน้าแล้ว กด "อ่านโน้ตจากรูป" เพื่อเริ่ม', 'ok'); return; }
+  if (total <= room){ await renderPdf(doc, 1, total, f.name); doc.destroy(); setScan('เพิ่ม ' + f.name + ' ' + total + ' หน้าแล้ว กด "แปลงเป็นโน้ตสากล" เพื่อเริ่ม', 'ok'); return; }
   // more pages than slots: let the person choose a range
   if (pdfPending) try{ pdfPending.doc.destroy(); }catch(e){}
   pdfPending = { doc, name: f.name, total };
@@ -2821,9 +2819,9 @@ async function addFiles(list){
   const arr = [...(list || [])];                 // copy now: the input is cleared right after this call
   let over = false;
   for (const f of arr){
-    if (isPdf(f)){ await openPdf(f); continue; }
+    if (isPdf(f)){ if (SRC !== 'image') setSource('image'); await openPdf(f); continue; }
     if (isAudio(f)){ openAudio(f); continue; }
-    if (f && f.type && f.type.startsWith('image/')){ if (files.length < MAXP) files.push({ file:f, rot:0 }); else over = true; }
+    if (f && f.type && f.type.startsWith('image/')){ if (SRC !== 'image') setSource('image'); if (files.length < MAXP) files.push({ file:f, rot:0 }); else over = true; }
   }
   if (over) toast('อ่านได้สูงสุด ' + MAXP + ' หน้าต่อครั้ง');
   drawThumbs();
@@ -2838,7 +2836,7 @@ function drawThumbs(){
     const n=document.createElement('span'); n.className='pg' + (it.label ? ' pdf' : ''); n.textContent = it.label ? it.label : i+1; if (it.src) fig.title = it.src;
     fig.append(img,x,r,n); box.append(fig);
   });
-  $('#readBtn').disabled = !files.length || !sample || !(caps && caps.images);
+  setGo(!files.length || !sample || !(caps && caps.images));
 }
 $('#cam').addEventListener('change', e=>{ addFiles(e.target.files); e.target.value=''; });
 $('#pick').addEventListener('change', e=>{ addFiles(e.target.files); e.target.value=''; });
@@ -3221,7 +3219,7 @@ async function ask(prompt, images, label){
   return { text, truncated };
 }
 function lockUI(on){
-  $('#readBtn').disabled = on || !files.length || !sample || !(caps && caps.images);
+  setGo(on || !files.length || !sample || !(caps && caps.images));
   $('#stopRead').hidden = !on;
   const f = $('#fixBars'); if (f) f.disabled = on || !sample;
 }
@@ -3292,7 +3290,7 @@ async function readScore(){
     paper.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth', block:'start'});
   }catch(e){
     const code = e && e.code;
-    setScan(ERR[code] || 'การเชื่อมต่อขัดข้อง ลองกด "อ่านโน้ตจากรูป" อีกครั้ง', code==='cancelled'?'':'err');
+    setScan(ERR[code] || 'การเชื่อมต่อขัดข้อง ลองกด "แปลงเป็นโน้ตสากล" อีกครั้ง', code==='cancelled'?'':'err');
     if (code==='not_granted'||code==='sampling_disabled') sample = null;
   }finally{
     readCtl = null; lockUI(false); runBarCheck();
@@ -3309,10 +3307,25 @@ async function proofreadNow(){
     setScan(ERR[e && e.code] || 'การเชื่อมต่อขัดข้อง ลองใหม่อีกครั้ง', e && e.code==='cancelled' ? '' : 'err');
   }finally{ readCtl = null; lockUI(false); runBarCheck(); }
 }
-$('#readBtn').addEventListener('click', readScore);
+// one "convert" button for every source: pictures/PDF (AI reads them), or an audio file (transcribed in the browser)
+let SRC = 'image', goImg = true;
+function setGo(imgDisabled){
+  if (imgDisabled !== undefined) goImg = imgDisabled;
+  const audio = SRC === 'audio';
+  $('#readBtn').disabled = audio ? (!AU.buf || AU.busy) : goImg;
+  $('#goLabel').textContent = !audio && !sample && window.claude ? 'ลงชื่อเข้าใช้ Claude เพื่อแปลงจากรูป' : 'แปลงเป็นโน้ตสากล';
+  document.querySelector('.card.scan').classList.toggle('src-audio', audio);   // picture-only settings step aside for audio
+}
+function setSource(kind){
+  SRC = kind;
+  if (kind === 'image'){ $('#audioPanel').hidden = true; }
+  else { if (files.length){ files.length = 0; drawThumbs(); } }
+  setGo();
+}
+$('#readBtn').addEventListener('click', () => SRC === 'audio' ? auRun(true) : readScore());
 function optMeta(){ const n = ['#optClean','#optStrips','#optVerify'].filter(id=>$(id).checked).length; const m = document.querySelector('details.adv .meta'); if (m) m.textContent = n===3 ? '· เปิดทั้งหมดอยู่' : '· เปิด '+n+'/3'; }
 ['#optClean','#optStrips','#optVerify'].forEach(id=>$(id).addEventListener('change', optMeta));
-$('#stopRead').addEventListener('click', ()=>readCtl && readCtl.abort());
+$('#stopRead').addEventListener('click', () => { if (AU.busy){ AU.stop = true; auStatus('กำลังหยุด…', ''); } else if (readCtl) readCtl.abort(); });
 
 /* ---------- downloads ---------- */
 let dl = null;
@@ -4724,7 +4737,7 @@ async function readThai(){
     paper.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }catch(e){
     const code = e && e.code;
-    setScan(ERR[code] || 'การเชื่อมต่อขัดข้อง ลองกด "อ่านโน้ตจากรูป" อีกครั้ง', code === 'cancelled' ? '' : 'err');
+    setScan(ERR[code] || 'การเชื่อมต่อขัดข้อง ลองกด "แปลงเป็นโน้ตสากล" อีกครั้ง', code === 'cancelled' ? '' : 'err');
     if (code === 'not_granted' || code === 'sampling_disabled') sample = null;
   }finally{ readCtl = null; lockUI(false); runBarCheck(); }
 }
@@ -4781,13 +4794,13 @@ setNoteType(store.get('scoresnap.ntype') === 'thai' ? 'thai' : 'staff');
 
 /* ---------- boot ---------- */
 render(); updateSelLabel();
-setScan('เลือกรูปโน้ตเพื่อเริ่ม');
+setScan('เลือกรูปโน้ต PDF หรือไฟล์เสียง แล้วกด "แปลงเป็นโน้ตสากล"');
 (async () => {
   const c = window.claude;
   if (!c || !c.use){ standalone(); return; }
   c.use('downloads').then(d=>{ dl=d; });
   sample = await c.use('sample');
-  if (!sample){ setScan('ยังไม่ได้ลงชื่อเข้าใช้ Claude: ฟังเสียง เปลี่ยนเครื่องดนตรี แก้โน้ต และนำเข้า MusicXML ได้ · ถ้าต้องการให้ AI อ่านรูปและบันทึกไฟล์ กด Sign in มุมขวาบน (สมัครฟรีได้)'); $('#readBtn').lastChild.textContent = 'ลงชื่อเข้าใช้ Claude เพื่ออ่านจากรูป'; return; }
+  if (!sample){ setScan('ยังไม่ได้ลงชื่อเข้าใช้ Claude: ฟังเสียง เปลี่ยนเครื่องดนตรี แก้โน้ต และนำเข้า MusicXML ได้ · ถ้าต้องการให้ AI อ่านรูปและบันทึกไฟล์ กด Sign in มุมขวาบน (สมัครฟรีได้)'); setGo(); return; }
   caps = await sample.limits().catch(()=>null);
   if (!caps || !caps.images){ setScan('มุมมองนี้ส่งรูปให้ Claude ไม่ได้ · ยังแก้ไขและฟังโน้ตได้'); sample=null; }
   else if (caps.images.mediaTypes) { $('#pick').accept = caps.images.mediaTypes.join(',') + ',application/pdf,.pdf'; }
