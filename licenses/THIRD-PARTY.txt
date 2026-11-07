@@ -1,0 +1,7 @@
+Score Snap uses these open-source components for audio → notation and instrument separation:
+
+- Basic Pitch (Spotify) model and code — Apache License 2.0 — https://github.com/spotify/basic-pitch-ts
+- TensorFlow.js — Apache License 2.0 — https://github.com/tensorflow/tfjs
+- @audio/neural-separate and @audio/neural-runtime (audiojs) — MIT — https://github.com/audiojs/neural
+- SCNet pretrained weights (starrytong/SCNet) — MIT, redistribution confirmed by the author in starrytong/SCNet#35; loaded at run time from https://huggingface.co/audiojs/scnet
+- ONNX Runtime Web (Microsoft) — MIT — https://github.com/microsoft/onnxruntime

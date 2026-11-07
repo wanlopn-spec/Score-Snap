@@ -143,7 +143,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .btn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grow{flex:1 1 auto}
-select,input[type=text],input[type=password]{font:inherit;font-size:.9rem;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;min-height:40px;max-width:100%}
+select,input[type=text],input[type=password],input[type=number]{font:inherit;font-size:.9rem;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;min-height:40px;max-width:100%}
 
 /* drop zone */
 .drop{border:1.5px dashed color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:var(--r);padding:22px 16px;display:grid;gap:14px;justify-items:center;text-align:center;
@@ -203,6 +203,15 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .ntype button{flex:1 1 120px;border:0;background:transparent;border-radius:10px;flex-direction:column;gap:2px;min-height:46px;color:var(--ink-2);font-weight:600}
 .ntype button small{font-weight:400;font-size:.72rem;opacity:.85}
 .ntype button[aria-pressed=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
+.aupanel audio{width:100%;height:40px}
+.au-range{display:flex;align-items:center;gap:6px}
+.au-range input{width:6em}
+.au-stems{display:grid;gap:8px}
+.au-stem{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.au-stem b{font-size:.84rem}
+.au-stem audio{width:100%;height:34px;min-width:0}
+.au-stem label{display:flex;align-items:center;gap:6px;font-size:.78rem;white-space:nowrap}
+@media (max-width:700px){.au-stem{grid-template-columns:1fr auto;}.au-stem audio{grid-column:1/-1;grid-row:2}}
 .thaipanel{display:grid;gap:10px;padding:12px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));background:var(--accent-soft)}
 .thai-h{display:grid;gap:2px}.thai-h b{font-weight:600}.thai-h span{font-size:.8rem;color:var(--ink-2)}
 .thai-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
@@ -505,7 +514,7 @@ button,.btn,.toggle span,summary,.score{touch-action:manipulation;-webkit-tap-hi
   .round,.toggle span{width:48px;height:48px}
   .playbtn{width:60px;height:60px}
   .thumbs button{width:34px;height:34px}
-  input[type=text],input[type=password],select,textarea{font-size:16px}
+  input[type=text],input[type=password],input[type=number],select,textarea{font-size:16px}
   input[type=range]{height:32px}
   .bc-list button{min-height:38px}
   .switch{width:50px;height:30px}.switch::after{width:24px;height:24px}.switch:checked::after{transform:translateX(20px)}
@@ -599,6 +608,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <div class="row">
           <label class="btn primary"><svg class="i"><use href="#i-camera"/></svg>ถ่ายรูป<input id="cam" type="file" accept="image/*" capture="environment"></label>
           <label class="btn"><svg class="i"><use href="#i-image"/></svg>เลือกรูป / PDF<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
+          <label class="btn"><svg class="i"><use href="#i-volume"/></svg>ไฟล์เสียง<input id="pickAudio" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff"></label>
         </div>
       </div>
       <div class="thumbs" id="thumbs"></div>
@@ -618,6 +628,40 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <span class="ntype-l">ชนิดโน้ต</span>
         <button type="button" data-type="staff" aria-pressed="true">โน้ตสากล <small>บรรทัดห้าเส้น</small></button>
         <button type="button" data-type="thai" aria-pressed="false">โน้ตไทย <small>ด ร ม ฟ ซ ล ท</small></button>
+      </div>
+      <div class="thaipanel aupanel" id="audioPanel" hidden>
+        <div class="thai-h"><b>ไฟล์เสียง → โน้ตเพลง</b><span id="auName">แยกเป็นโน้ตทีละแนว หรือแยกเสียงเครื่องดนตรีออกเป็นไฟล์</span></div>
+        <audio id="auPlayer" controls preload="metadata"></audio>
+        <div class="thai-opts">
+          <label class="field">วิธีแยก
+            <select id="auMode">
+              <option value="pitch">แยกตามระดับเสียง: ทำนอง · เสียงประสาน · เบส (เร็ว)</option>
+              <option value="stems">แยกเครื่องดนตรีด้วย AI: เสียงร้อง · เบส · เครื่องอื่น (ช้ากว่า)</option>
+              <option value="piano">ไม่แยก: เป็นโน้ตเปียโน 2 มือ</option>
+            </select>
+          </label>
+          <label class="field">ช่วงเวลา (วินาที)
+            <span class="au-range"><input type="number" id="auFrom" min="0" value="0" step="1" inputmode="decimal" aria-label="เริ่มที่วินาที"> ถึง <input type="number" id="auTo" min="1" value="60" step="1" inputmode="decimal" aria-label="ถึงวินาที"></span>
+          </label>
+          <label class="field">ความเร็ว (BPM)
+            <input type="number" id="auBpm" min="30" max="240" placeholder="หาเองอัตโนมัติ" inputmode="numeric">
+          </label>
+          <label class="field">อัตราจังหวะ
+            <select id="auMeter"><option value="4">4/4</option><option value="3">3/4</option><option value="2">2/4</option></select>
+          </label>
+          <label class="field">ความละเอียดโน้ต
+            <select id="auGrid"><option value="2">ถึงเขบ็ต 1 ชั้น (อ่านง่าย)</option><option value="4">ถึงเขบ็ต 2 ชั้น (ละเอียด)</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <button class="primary" id="auGo" type="button">แปลงเป็นโน้ต</button>
+          <button id="auStemsOnly" type="button">แยกเสียงเครื่องดนตรีเป็นไฟล์</button>
+          <button id="auStop" type="button" hidden>หยุด</button>
+        </div>
+        <div class="bar" id="auBarW" hidden><i id="auBar"></i></div>
+        <div class="status" id="auStatus" aria-live="polite"></div>
+        <div class="au-stems" id="auStems" hidden></div>
+        <p class="note">เหมาะกับเพลงที่เสียงชัด เครื่องดนตรีไม่มากชิ้น โน้ตที่ได้เป็นร่างให้แก้ต่อ ควรตรวจกับเสียงจริงอีกครั้ง · แยกครั้งละไม่เกิน 1–2 นาที (บน iPad/มือถือ แนะนำไม่เกิน 30 วินาที) · การแยกเครื่องดนตรีโหลดโมเดล AI ขนาด 13 MB ครั้งแรก (SCNet สัญญาอนุญาต MIT) แล้วเก็บไว้ใช้ครั้งต่อไป · ไฟล์เสียงประมวลผลในเครื่องนี้ ไม่ถูกส่งออกไปที่ใด</p>
       </div>
       <div class="thaipanel" id="thaiPanel" hidden>
         <div class="thai-h"><b>โน้ตไทย → โน้ตสากล</b><span>AI อ่านตัวโน้ตไทยจากรูปลงกล่องนี้ แล้วแปลงเป็นบรรทัดห้าเส้น หรือพิมพ์โน้ตไทยเองแล้วกดแปลงก็ได้</span></div>
@@ -1314,6 +1358,561 @@ const THAI_SND = (() => {
   return api;
 })();
 THAI_SND.susOf = k => mySus(k);
+
+/* Basic Pitch (Spotify, Apache-2.0) */
+(()=>{var H=(...t)=>window.tf.concat1d(...t),v=(...t)=>window.tf.expandDims(...t),$=(...t)=>window.tf.loadGraphModel(...t),z=(...t)=>window.tf.slice(...t),B=(...t)=>window.tf.tensor(...t),k=(...t)=>window.tf.zeros(...t),W={frame:(...t)=>window.tf.signal.frame(...t)};var y={contours:"Identity",onsets:"Identity_2",frames:"Identity_1"},j=1,F=22050,L=256,at=Math.floor(F/L),ct=2,Q=F*ct-L,X=30,V=Math.floor(X/2),R=X*L,lt=Q-R,P=class{constructor(e){if(R%2!==0)throw new Error(`OVERLAP_LENGTH_FRAMES is not divisible by 2! Is ${R}`);this.model=typeof e=="string"?$(e):e}adjustNoteStart(e,n){return e.map(s=>({startTimeSeconds:s.startTimeSeconds+n,durationSeconds:s.durationSeconds,pitch_midi:s.pitchMidi,amplitude:s.amplitude,pitchBends:s.pitchBends}))}async evaluateSingleFrame(e,n){let s=await this.model,i=z(e,n,1),o=s.execute(i,[y.frames,y.onsets,y.contours]);return[o[0],o[1],o[2]]}async prepareData(e){let n=H([k([Math.floor(R/2)],"float32"),B(e)]);return[v(W.frame(n,Q,lt,!0,0),-1),e.length]}unwrapOutput(e){let n=e;n=e.slice([0,V,0],[-1,e.shape[1]-2*V,-1]);let s=n.shape;return n.reshape([s[0]*s[1],s[2]])}async evaluateModel(e,n,s){let i;if(e instanceof Float32Array)i=e;else{if(e.sampleRate!==F)throw new Error(`Input audio buffer is not at correct sample rate! Is ${e.sampleRate}. Should be ${F}`);if(e.numberOfChannels!==j)throw new Error(`Input audio buffer is not mono! Number of channels is ${e.numberOfChannels}. Should be ${j}`);i=e.getChannelData(0)}let[o,u]=await this.prepareData(i),a=Math.floor(u*(at/F)),d=0;for(let f=0;f<o.shape[0];++f){s(f/o.shape[0]);let[p,g,M]=await this.evaluateSingleFrame(o,f),x=this.unwrapOutput(p),w=this.unwrapOutput(g),E=this.unwrapOutput(M),h=x.shape[0];if(!(d>=a)){if(h+d>=a){let T=a-d;x=x.slice([0,0],[T,-1]),w=w.slice([0,0],[T,-1]),E=E.slice([0,0],[T,-1])}d+=h,n(await x.array(),await w.array(),await E.array())}}s(1)}};var D=21,b=22050,J=2,_=256,ut=Math.floor(b/_),K=ut*J,dt=b*J-_,ht=_/b*(K-dt/_)+.0018,q=87,tt=3,mt=27.5,ft=88,Y=ft*tt,Z=t=>12*(Math.log2(t)-Math.log2(440))+69,pt=t=>440*2**((t-69)/12),C=t=>t*_/b-ht*Math.floor(t/K);function et(t){return t.length===0?null:t.reduce((e,n,s)=>t[e]>n?e:s,-1)}var gt=t=>t.map(e=>et(e));function Mt(t,e){let n=[],s=[];for(let i=0;i<t.length;i++)for(let o=0;o<t[i].length;o++)t[i][o]>e&&(n.push(i),s.push(o));return[n,s]}function xt(t){let[e,n,s]=t.reduce((u,a)=>{let[d,f,p]=a.reduce((g,M)=>[g[0]+M,g[1]+M*M,g[2]+1],[0,0,0]);return[u[0]+d,u[1]+f,u[2]+p]},[0,0,0]),i=e/s,o=Math.sqrt(1/(s-1)*(n-e*e/s));return[i,o]}function G(t){return t.reduce((e,n)=>Math.max(e,...n),0)}function St(t){let e=t[0].map(n=>n.slice());for(let n=1;n<t.length;++n)for(let s=0;s<t[0].length;++s)for(let i=0;i<t[0][0].length;++i)e[s][i]=Math.min(e[s][i],t[n][s][i]);return e}function wt(t,e=1){let n=[];for(let s=0;s<t[0].length;++s)for(let i=0;i<t.length;++i){let o=!0;for(let u=Math.max(0,i-e);o&&u<=Math.min(t.length-1,i+e);++u)u!==i&&(o=o&&t[i][s]>t[u][s]);o&&n.push([i,s])}return n}function Ot(t){let e=t[0].map(n=>n.slice());for(let n=1;n<t.length;++n)for(let s=0;s<t[0].length;++s)for(let i=0;i<t[0][0].length;++i)e[s][i]=Math.max(e[s][i],t[n][s][i]);return e}function At(t){return t!==null}function Et(t,e,n,s){if(n){let i=Z(n)-D;for(let o=0;o<t.length;o++)t[o].fill(0,i);for(let o=0;o<e.length;o++)e[o].fill(0,i)}if(s){let i=Z(s)-D;for(let o=0;o<t.length;o++)t[o].fill(0,0,i);for(let o=0;o<e.length;o++)e[o].fill(0,0,i)}}function Nt(t,e,n=2){let s=Array.from(Array(n).keys()).map(a=>a+1).map(a=>{let d=Array(a).fill(Array(e[0].length).fill(0)).concat(e),f=d.slice(a),p=d.slice(0,-a);if(f.length!==p.length)throw new Error(`nPlus length !== minusN length: ${f.length} !== ${p.length}`);return f.map((g,M)=>g.map((x,w)=>x-p[M][w]))}),i=St(s);i=i.map(a=>a.map(d=>Math.max(d,0))),i=i.map((a,d)=>d<n?a.fill(0):a);let o=G(t),u=G(i);return i=i.map(a=>a.map(d=>o*d/u)),Ot([t,i])}function nt(t,e,n=.5,s=.3,i=5,o=!0,u=null,a=null,d=!0,f=11){let p=s;if(p===null){let[l,c]=xt(t);p=l+c}let g=t.length;Et(e,t,u,a);let M=e;o&&(M=Nt(e,t));let x=M.map(l=>l.map(()=>0));wt(M).forEach(([l,c])=>{x[l][c]=M[l][c]});let[w,E]=Mt(x,n);w.reverse(),E.reverse();let h=t.map(l=>l.slice()),T=w.map((l,c)=>{let r=E[c];if(l>=g-1)return null;let m=l+1,S=0;for(;m<g-1&&S<f;)h[m][r]<p?S+=1:S=0,m+=1;if(m-=S,m-l<=i)return null;for(let A=l;A<m;++A)h[A][r]=0,r<q&&(h[A][r+1]=0),r>0&&(h[A][r-1]=0);let O=t.slice(l,m).reduce((A,N)=>A+N[r],0)/(m-l);return{startFrame:l,durationFrames:m-l,pitchMidi:r+D,amplitude:O}}).filter(At);if(d===!0)for(;G(h)>p;){let[l,c]=h.reduce((N,I,ot)=>{let U=et(I);return I[U]>h[N[0]][N[1]]?[ot,U]:N},[0,0]);h[l][c]=0;let r=l+1,m=0;for(;r<g-1&&m<f;)h[r][c]<p?m+=1:m=0,h[r][c]=0,c<q&&(h[r][c+1]=0),c>0&&(h[r][c-1]=0),r+=1;let S=r-1-m;for(r=l-1,m=0;r>0&&m<f;)h[r][c]<p?m+=1:m=0,h[r][c]=0,c<q&&(h[r][c+1]=0),c>0&&(h[r][c-1]=0),r-=1;let O=r+1+m;if(O<0)throw new Error(`iStart is not positive! value: ${O}`);if(S>=g)throw new Error(`iEnd is past end of times. (iEnd, times.length): (${S}, ${g})`);let A=t.slice(O,S).reduce((N,I)=>N+I[c],0)/(S-O);S-O<=i||T.push({startFrame:O,durationFrames:S-O,pitchMidi:c+D,amplitude:A})}return T}var Tt=(t,e)=>Array.from(Array(t).keys()).map(n=>Math.exp(-1*(n-(t-1)/2)**2/(2*e**2))),Ft=t=>12*tt*Math.log2(pt(t)/mt);function it(t,e,n=25){let s=n*2+1,i=Tt(s,5);return e.map(o=>{let u=Math.floor(Math.round(Ft(o.pitchMidi))),a=Math.max(u-n,0),d=Math.min(Y,u+n+1),f=i.slice(Math.max(0,n-u),s-Math.max(0,u-(Y-n-1))),p=t.slice(o.startFrame,o.startFrame+o.durationFrames).map(x=>x.slice(a,d).map((w,E)=>w*f[E])),g=n-Math.max(0,n-u),M=gt(p).map(x=>x-g);return Object.assign(Object.assign({},o),{pitchBends:M})})}var st=t=>t.map(e=>({pitchMidi:e.pitchMidi,amplitude:e.amplitude,pitchBends:e.pitchBends,startTimeSeconds:C(e.startFrame),durationSeconds:C(e.startFrame+e.durationFrames)-C(e.startFrame)}));window.BASICPITCH={BasicPitch:P,outputToNotesPoly:nt,addPitchBendsToNoteEvents:it,noteFramesToTime:st};})();
+
+/* @audio/neural-separate (MIT) with SCNet weights (MIT, starrytong) */
+(()=>{var dr=Object.create;var Ze=Object.defineProperty;var hr=Object.getOwnPropertyDescriptor;var gr=Object.getOwnPropertyNames;var wr=Object.getPrototypeOf,yr=Object.prototype.hasOwnProperty;var br=(e,r,t)=>()=>{if(t)throw t[0];try{return e&&(r=e(e=0)),r}catch(a){throw t=[a],a}};var ye=(e,r)=>()=>{try{return r||e((r={exports:{}}).exports,r),r.exports}catch(t){throw r=0,t}},xr=(e,r)=>{for(var t in r)Ze(e,t,{get:r[t],enumerable:!0})},Ar=(e,r,t,a)=>{if(r&&typeof r=="object"||typeof r=="function")for(let l of gr(r))!yr.call(e,l)&&l!==t&&Ze(e,l,{get:()=>r[l],enumerable:!(a=hr(r,l))||a.enumerable});return e};var J=(e,r,t)=>(t=e!=null?dr(wr(e)):{},Ar(r||!e||!e.__esModule?Ze(t,"default",{value:e,enumerable:!0}):t,e));var Oe=ye((xa,Pt)=>{var _r=window.ort;Pt.exports=_r});var be=ye((va,jt)=>{jt.exports={}});var Fe=ye((Ma,St)=>{St.exports={}});var ze=ye(($a,Tt)=>{Tt.exports={}});var et=ye((Fa,Rt)=>{Rt.exports={}});var tt=ye((ka,Lt)=>{Lt.exports={}});var Dt={};xr(Dt,{default:()=>at,engine:()=>Br,gpu:()=>Ut});async function Ut(){let e=await globalThis.navigator?.gpu?.requestAdapter({powerPreference:"high-performance"}).catch(()=>null);return!e||e.info?.isFallbackAdapter||!["subgroups","chromium-experimental-subgroup-matrix"].every(t=>e.features.has(t))||![...e.info.subgroupMatrixConfigs??[]].some(t=>t.componentType==="f32"&&t.M===8&&t.N===8&&t.K===8)?null:e.requestDevice({requiredFeatures:["subgroups","chromium-experimental-subgroup-matrix"],requiredLimits:{maxComputeWorkgroupStorageSize:32768,maxStorageBufferBindingSize:e.limits.maxStorageBufferBindingSize,maxBufferSize:e.limits.maxBufferSize}}).catch(()=>null)}async function Br(e,r,t){if(t??(t=await Ut()),!t)return null;let a=await at(t,e,r),{freqs:l,frames:o}=e;return{inputs:[{name:"mix_spec",dims:[1,4,l,o],type:"float32"}],outputs:[{name:"stems_spec",dims:[1,4,l,o],type:"float32"}],backend:"roformer",async run(i){return{stems_spec:{data:await a.run(i.mix_spec.data),dims:[1,4,l,o],type:"float32"}}},free(){t.destroy()}}}async function at(e,r,t){let{frames:a,freqs:l,channels:o,dim:i,heads:n,depth:s,bands:p,groups:f}=r,c=64,m=1536,M=1536,u=Math.ceil(a/32)*32,h=3*n*c,b=Math.ceil((h+n)/32)*32,y=l*o*2,_=Math.ceil(a/16)*16,g=Math.ceil(p/16)*16,w=v=>Math.ceil(v/16)*16,F=f.map(([v,x,z])=>({b0:v,b1:x,n:x-v,W:z,Wp:w(z)})),d=v=>{let x=r.tensors[v],z=x.shape.reduce((D,U)=>D*U,1);return x.type==="float16"?new Float16Array(t.buffer,t.byteOffset+x.offset,z):x.type==="int32"?new Int32Array(t.buffer,t.byteOffset+x.offset,z):new Float32Array(t.buffer,t.byteOffset+x.offset,z)},k=GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST|GPUBufferUsage.COPY_SRC,A=(v,x="f32")=>e.createBuffer({size:Math.max(16,v*4),usage:k}),E=v=>{let x=e.createBuffer({size:Math.max(16,v.byteLength),usage:k,mappedAtCreation:!0});return new v.constructor(x.getMappedRange()).set(v),x.unmap(),x},P=v=>v instanceof Float32Array?v:Float32Array.from(v),S=(v,x,z,D,U,Y,N=(ee,Z)=>ee*Y+Z)=>{let ee=new Float32Array(x*U*Y);for(let Z=0;Z<x;Z++)for(let G=0;G<z;G++)for(let K=0;K<D;K++)ee[Z*U*Y+N(G,K)]=v[(Z*z+G)*D+K];return ee},j={split:[],splitB:[],splitIdx:[],m2:[],m2B:[]};for(let[v,x]of F.entries()){j.split.push(E(S(d(`split_w.${v}`),x.n,x.W,i,x.Wp,i))),j.splitB.push(E(P(d(`split_b.${v}`))));let z=d(`si${v}`),D=new Int32Array(x.n*x.Wp).fill(y);for(let G=0;G<x.n;G++)for(let K=0;K<x.W;K++)D[G*x.Wp+K]=z[G*x.W+K];j.splitIdx.push(E(D));let U=d(`m2_w.${v}`),Y=d(`m2_b.${v}`),N=x.Wp,ee=new Float32Array(x.n*M*2*N),Z=new Float32Array(x.n*2*N);for(let G=0;G<x.n;G++){for(let K=0;K<M;K++)for(let ce=0;ce<x.W;ce++)ee[(G*M+K)*2*N+ce]=U[(G*M+K)*2*x.W+ce],ee[(G*M+K)*2*N+N+ce]=U[(G*M+K)*2*x.W+x.W+ce];for(let K=0;K<x.W;K++)Z[G*2*N+K]=Y[G*2*x.W+K],Z[G*2*N+N+K]=Y[G*2*x.W+x.W+K]}j.m2.push(E(ee)),j.m2B.push(E(Z))}j.mw=[0,1].map(v=>E(P(d(`mw.${v}`)))),j.mb=[0,1].map(v=>E(P(d(`mb.${v}`)))),j.blocks=[];for(let v=0;v<s;v++)for(let x=0;x<2;x++){let z=`blocks.${v}.${x}.`,D=z+"layers.0.0.",U=z+"layers.0.1.";j.blocks.push({out:E(P(d(z+"out"))),qkvg:E(S(d(D+"qkvg"),1,i,h+n,i,b)),gb:E(P(d(D+"gb"))),wo:E(P(d(D+"wo"))),w1:E(P(d(U+"w1"))),b1:E(P(d(U+"b1"))),w2:E(P(d(U+"w2"))),b2:E(P(d(U+"b2")))})}let R=v=>{let x=d(`blocks.0.${v}.layers.0.0.cos`),z=d(`blocks.0.${v}.layers.0.0.sin`);return[E(P(x)),E(P(z))]},[$,T]=R(0),[O,L]=R(1),q=d("i1"),I=d("i2"),W=d("wt"),B=[],C=[],H=0,V=0;for(let v of F)B.push(H),C.push(V),H+=v.n*u*v.Wp,V+=v.n*v.W;let Q=v=>{if(v>=V)return[0,0,0];let x=C.findLastIndex(N=>N<=v),z=F[x],D=v-C[x],U=Math.floor(D/z.W),Y=D%z.W;return[B[x]+U*u*z.Wp+Y,z.Wp,1]},te=new Uint32Array(y*8);for(let v=0;v<y;v++)te.set([...Q(q[v]),...Q(I[v])],v*8);let _e=E(te),ae=E(Float32Array.from({length:y},(v,x)=>W[x])),ne=A(u*(y+1)),re=A(p*u*i),Ee=A(p*u*i),ut=A(p*u*b),Pe=Math.max(p*n*_,a*n*g)*c,He=A(Pe),Ke=A(Pe),Ne=A(Pe),ft=A(Pe),ct=A(p*u*n),pt=A(p*u*n*c),je=A(p*u*m),mt=A(p*u*M),dt=A(H),ht=A(4*l*a),gt=F.map(v=>A(v.n*u*v.Wp)),wt=F.map(v=>A(v.n*u*2*v.Wp)),Zt=A(4),yt=new Map,oe=(v,x)=>yt.get(v)??yt.set(v,e.createComputePipeline({layout:"auto",compute:{module:e.createShaderModule({code:x}),entryPoint:"main"}})).get(v),le=(...v)=>{let x=e.createBuffer({size:Math.ceil(v.length/4)*16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});return e.queue.writeBuffer(x,0,new Uint32Array(v.map(z=>typeof z=="number"&&!Number.isInteger(z)?new Uint32Array(new Float32Array([z]).buffer)[0]:z))),x},Ye=[],se=(v,x,z)=>Ye.push([v,e.createBindGroup({layout:v.getBindGroupLayout(0),entries:x.map((D,U)=>({binding:U,resource:{buffer:D}}))}),z]),ie=`enable subgroups;
+enable chromium_experimental_subgroup_matrix;
+`,Xt=v=>oe("mm"+v,ie+`
+@group(0) @binding(0) var<storage, read> A: array<f32>;
+@group(0) @binding(1) var<storage, read> Bm: array<f32>;
+@group(0) @binding(2) var<storage, read_write> C: array<f32>;
+@group(0) @binding(3) var<storage, read> bias: array<f32>;
+struct P { M: u32, N: u32, K: u32, a0: u32, sa: u32, b0: u32, sb: u32, c0: u32, sc: u32, ldc: u32, bias0: u32, sbias: u32 }
+@group(0) @binding(4) var<uniform> p: P;
+var<workgroup> tile: array<f32, 1024>;
+@compute @workgroup_size(32)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(subgroup_invocation_id) lane: u32) {
+  _ = bias[0];   // bound whether read or not: the layout is the module's own
+  let r0 = wg.y * 32u; let n0 = wg.x * 32u; let b = wg.z;
+  let ab = p.a0 + b * p.sa + r0 * p.K; let bb = p.b0 + b * p.sb + n0;
+  ${[0,1,2,3].map(x=>[0,1,2,3].map(z=>`var c${x}${z}: subgroup_matrix_result<f32, 8, 8>;`).join(" ")).join(`
+  `)}
+  for (var k = 0u; k < p.K; k += 8u) {
+    ${[0,1,2,3].map(x=>`let a${x} = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&A, ab + ${x*8}u * p.K + k, false, p.K);`).join(`
+    `)}
+    ${[0,1,2,3].map(x=>`let b${x} = subgroupMatrixLoad<subgroup_matrix_right<f32, 8, 8>>(&Bm, bb + k * p.N + ${x*8}u, false, p.N);`).join(`
+    `)}
+    ${[0,1,2,3].map(x=>[0,1,2,3].map(z=>`c${x}${z} = subgroupMatrixMultiplyAccumulate(a${x}, b${z}, c${x}${z});`).join(" ")).join(`
+    `)}
+  }
+  ${[0,1,2,3].map(x=>[0,1,2,3].map(z=>`subgroupMatrixStore(&tile, ${x*8*32+z*8}u, c${x}${z}, false, 32u);`).join(" ")).join(`
+  `)}
+  workgroupBarrier();
+  for (var e = lane; e < 1024u; e += 32u) {
+    let r = r0 + e / 32u; let n = n0 + e % 32u;
+    if (r < p.M && n < p.N) {
+      var v = tile[e];
+      ${v.includes("b")?"v += bias[p.bias0 + b * p.sbias + n];":""}
+      ${v.includes("g")?"v = 0.5 * v * (1.0 + erf_(v * 0.7071067811865476));":v.includes("t")?"v = tanh(v);":""}
+      let o = p.c0 + b * p.sc + r * p.ldc + n;
+      ${v.includes("r")?"C[o] += v;":"C[o] = v;"}
+    }
+  }
+}
+fn erf_(x: f32) -> f32 {   // Abramowitz & Stegun 7.1.26 is 1.5e-7; GELU's own float32 erf is as close
+  let t = 1.0 / (1.0 + 0.3275911 * abs(x));
+  let y = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * exp(-x * x);
+  return select(-y, y, x >= 0.0);
+}`),ue=(v,x,z,D,U,{M:Y,N,K:ee,batch:Z=1,a0:G=0,sa:K=0,b0:ce=0,sb:ir=0,c0:ur=0,sc:fr=0,ldc:cr=N,bias0:pr=0,sbias:mr=0})=>se(Xt(v),[x,z,D,U??ae,le(Y,N,ee,G,K,ce,ir,ur,fr,cr,pr,mr)],[N/32,Y/32,Z]),er=v=>oe("norm"+v,ie+`
+@group(0) @binding(0) var<storage, read_write> x: array<f32>;
+@group(0) @binding(1) var<storage, read_write> y: array<f32>;
+@group(0) @binding(2) var<storage, read> g: array<f32>;
+struct P { rows: u32, n: u32 }
+@group(0) @binding(3) var<uniform> p: P;
+@compute @workgroup_size(32)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(subgroup_invocation_id) lane: u32) {
+  _ = g[0]; _ = y[0];
+  let r = wg.x + wg.y * 65535u;
+  if (r >= p.rows) { return; }
+  var s = 0.0;
+  for (var i = lane; i < p.n; i += 32u) { let v = x[r * p.n + i]; s += v * v; }
+  let k = 1.0 / max(sqrt(subgroupAdd(s)), 1e-12);
+  for (var i = lane; i < p.n; i += 32u) { ${v?"x[r * p.n + i] = x[r * p.n + i] * k * g[i];":"y[r * p.n + i] = x[r * p.n + i] * k;"} }
+}`),tr=v=>[Math.min(v,65535),Math.ceil(v/65535),1],Qe=(v,x,z,D,U)=>se(er(!!U),[v,U?Zt:x,U??ae,le(z,D)],tr(z)),rr=oe("split",ie+`
+@group(0) @binding(0) var<storage, read> E: array<f32>;
+@group(0) @binding(1) var<storage, read> idx: array<i32>;
+@group(0) @binding(2) var<storage, read_write> A: array<f32>;
+struct P { Wp: u32, Tp: u32, T: u32, cols: u32 }
+@group(0) @binding(3) var<uniform> p: P;
+@compute @workgroup_size(32)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(subgroup_invocation_id) lane: u32) {
+  let t = wg.x; let j = wg.y;
+  var s = 0.0;
+  for (var e = lane; e < p.Wp; e += 32u) { let v = select(0.0, E[t * (p.cols + 1u) + u32(idx[j * p.Wp + e])], t < p.T); s += v * v; }
+  let k = 1.0 / max(sqrt(subgroupAdd(s)), 1e-12);
+  for (var e = lane; e < p.Wp; e += 32u) {
+    let v = select(0.0, E[t * (p.cols + 1u) + u32(idx[j * p.Wp + e])], t < p.T);
+    A[(j * p.Tp + t) * p.Wp + e] = v * k;
+  }
+}`),ar=oe("rope",ie+`
+@group(0) @binding(0) var<storage, read> Yq: array<f32>;
+@group(0) @binding(1) var<storage, read_write> Q: array<f32>;
+@group(0) @binding(2) var<storage, read_write> K: array<f32>;
+@group(0) @binding(3) var<storage, read_write> V: array<f32>;
+@group(0) @binding(4) var<storage, read_write> Gt: array<f32>;
+@group(0) @binding(5) var<storage, read> cs: array<f32>;
+@group(0) @binding(6) var<storage, read> sn: array<f32>;
+@group(0) @binding(7) var<storage, read> gb: array<f32>;
+struct P { time: u32, Tp: u32, T: u32, L: u32, ld: u32 }
+@group(0) @binding(8) var<uniform> p: P;
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) li: vec3u) {
+  let t = wg.x; let band = wg.y; let h = wg.z; let d = li.x;
+  if (t >= p.T) { return; }
+  let r = band * p.Tp + t;
+  var seq = band; var pos = t;
+  if (p.time == 0u) { seq = t; pos = band; }
+  let o = ((seq * ${n}u + h) * p.L + pos) * 64u + d;
+  let y = r * p.ld + h * 64u;
+  let rot = select(Yq[y + d - 32u], -Yq[y + d + 32u], d < 32u);
+  let rk = select(Yq[y + ${n*c}u + d - 32u], -Yq[y + ${n*c}u + d + 32u], d < 32u);
+  Q[o] = Yq[y + d] * cs[pos * 64u + d] + rot * sn[pos * 64u + d];
+  K[o] = Yq[y + ${n*c}u + d] * cs[pos * 64u + d] + rk * sn[pos * 64u + d];
+  V[o] = Yq[y + ${2*n*c}u + d];
+  if (d == 0u) { Gt[r * ${n}u + h] = 1.0 / (1.0 + exp(-(Yq[r * p.ld + ${h}u + h] + gb[h]))); }
+}`),nr=oe("merge",ie+`
+@group(0) @binding(0) var<storage, read> O: array<f32>;
+@group(0) @binding(1) var<storage, read> Gt: array<f32>;
+@group(0) @binding(2) var<storage, read_write> Zb: array<f32>;
+struct P { time: u32, Tp: u32, T: u32, L: u32 }
+@group(0) @binding(3) var<uniform> p: P;
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) li: vec3u) {
+  let t = wg.x; let band = wg.y; let h = wg.z; let d = li.x;
+  let r = band * p.Tp + t;
+  if (t >= p.T) { Zb[r * ${n*c}u + h * 64u + d] = 0.0; return; }
+  var seq = band; var pos = t;
+  if (p.time == 0u) { seq = t; pos = band; }
+  Zb[r * ${n*c}u + h * 64u + d] = O[((seq * ${n}u + h) * p.L + pos) * 64u + d] * Gt[r * ${n}u + h];
+}`),Se=16,X=32,Me=4,fe=[0,1],de=[0,1,2,3],Je=[...Array(8).keys()],bt=`${fe.map(v=>de.map(x=>`var s${v}_${x}: subgroup_matrix_result<f32, 8, 8>;`).join(" ")).join(`
+    `)}
+    for (var k = 0u; k < 8u; k++) {
+      ${fe.map(v=>`let q${v} = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&Q, base + (r0 + ${v*8}u) * 64u + k * 8u, false, 64u);`).join(`
+      `)}
+      ${de.map(v=>`let k${v} = subgroupMatrixLoad<subgroup_matrix_right<f32, 8, 8>>(&K, base + (c0 + ${v*8}u) * 64u + k * 8u, true, 64u);`).join(`
+      `)}
+      ${fe.map(v=>de.map(x=>`s${v}_${x} = subgroupMatrixMultiplyAccumulate(q${v}, k${x}, s${v}_${x});`).join(" ")).join(`
+      `)}
+    }
+    ${fe.map(v=>de.map(x=>`subgroupMatrixStore(&S[sg], ${v*8*X+x*8}u, s${v}_${x}, false, ${X}u);`).join(" ")).join(`
+    `)}
+    workgroupBarrier();`,or=oe("att",ie+`
+@group(0) @binding(0) var<storage, read> Q: array<f32>;
+@group(0) @binding(1) var<storage, read> K: array<f32>;
+@group(0) @binding(2) var<storage, read> V: array<f32>;
+@group(0) @binding(3) var<storage, read_write> O: array<f32>;
+struct P { n: u32, np: u32 }
+@group(0) @binding(4) var<uniform> p: P;
+var<workgroup> S: array<array<f32, ${Se*X}>, ${Me}>;
+var<workgroup> Ow: array<array<f32, ${Se*64}>, ${Me}>;
+@compute @workgroup_size(${32*Me})
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(subgroup_id) sg: u32, @builtin(subgroup_invocation_id) lane: u32) {
+  let b = wg.y;
+  let r0 = (wg.x * ${Me}u + sg) * ${Se}u;
+  let base = b * p.np * 64u;
+  let row = lane / 2u; let half = (lane % 2u) * ${X/2}u;    // two lanes a row, 16 columns each
+  var mx = -1e30;
+  for (var c0 = 0u; c0 < p.n; c0 += ${X}u) {
+    ${bt}
+    for (var j = 0u; j < ${X/2}u; j++) { if (c0 + half + j < p.n) { mx = max(mx, S[sg][row * ${X}u + half + j]); } }
+    workgroupBarrier();
+  }
+  mx = max(mx, subgroupShuffleXor(mx, 1u));
+  var l = 0.0;
+  ${fe.map(v=>Je.map(x=>`var o${v}_${x}: subgroup_matrix_result<f32, 8, 8>;`).join(" ")).join(`
+  `)}
+  for (var c0 = 0u; c0 < p.n; c0 += ${X}u) {
+    ${bt}
+    for (var j = 0u; j < ${X/2}u; j++) {
+      let at = row * ${X}u + half + j;
+      let e = select(0.0, exp(S[sg][at] - mx), c0 + half + j < p.n);
+      S[sg][at] = e; l += e;
+    }
+    workgroupBarrier();
+    ${fe.map(v=>de.map(x=>`let p${v}_${x} = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&S[sg], ${v*8*X+x*8}u, false, ${X}u);`).join(" ")).join(`
+    `)}
+    ${Je.map(v=>de.map(x=>`let v${x}_${v} = subgroupMatrixLoad<subgroup_matrix_right<f32, 8, 8>>(&V, base + (c0 + ${x*8}u) * 64u + ${v*8}u, false, 64u);`).join(" ")+`
+    `+fe.map(x=>de.map(z=>`o${x}_${v} = subgroupMatrixMultiplyAccumulate(p${x}_${z}, v${z}_${v}, o${x}_${v});`).join(" ")).join(" ")).join(`
+    `)}
+    workgroupBarrier();
+  }
+  l += subgroupShuffleXor(l, 1u);
+  ${fe.map(v=>Je.map(x=>`subgroupMatrixStore(&Ow[sg], ${v*8*64+x*8}u, o${v}_${x}, false, 64u);`).join(" ")).join(`
+  `)}
+  workgroupBarrier();
+  // lane pairs hold their row's sum; each lane writes half its row
+  for (var d = 0u; d < 32u; d++) {
+    let r = r0 + row;
+    if (r < p.n) { O[base + r * 64u + half * 2u + d] = Ow[sg][row * 64u + half * 2u + d] / l; }
+  }
+}`),lr=oe("glu",ie+`
+@group(0) @binding(0) var<storage, read> Yg: array<f32>;
+@group(0) @binding(1) var<storage, read_write> Mo: array<f32>;
+struct P { rows: u32, Wp: u32, at: u32 }
+@group(0) @binding(2) var<uniform> p: P;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gi: vec3u) {
+  let i = gi.x + gi.y * 65535u * 64u;
+  if (i >= p.rows * p.Wp) { return; }
+  let r = i / p.Wp; let e = i % p.Wp;
+  Mo[p.at + i] = Yg[r * 2u * p.Wp + e] / (1.0 + exp(-Yg[r * 2u * p.Wp + p.Wp + e]));
+}`),sr=oe("mask",ie+`
+@group(0) @binding(0) var<storage, read> Mo: array<f32>;
+@group(0) @binding(1) var<storage, read> map: array<u32>;
+@group(0) @binding(2) var<storage, read> wt: array<f32>;
+@group(0) @binding(3) var<storage, read> E: array<f32>;
+@group(0) @binding(4) var<storage, read_write> Out: array<f32>;
+struct P { T: u32, F: u32, cols: u32 }
+@group(0) @binding(5) var<uniform> p: P;
+fn mask(t: u32, o: u32) -> f32 {
+  let a = map[o * 8u]; let sa = map[o * 8u + 1u]; let on1 = map[o * 8u + 2u];
+  let b = map[o * 8u + 3u]; let sb = map[o * 8u + 4u]; let on2 = map[o * 8u + 5u];
+  var v = 0.0;
+  if (on1 == 1u) { v += Mo[a + t * sa]; }
+  if (on2 == 1u) { v += Mo[b + t * sb]; }
+  return v * wt[o];
+}
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gi: vec3u) {
+  let t = gi.x; let fs = gi.y;          // fs = f\xB7S + s
+  if (t >= p.T) { return; }
+  let f = fs / ${o}u; let s = fs % ${o}u;
+  let o = fs * 2u;
+  let er = E[t * (p.cols + 1u) + o]; let ei = E[t * (p.cols + 1u) + o + 1u];
+  let mr = mask(t, o); let mi = mask(t, o + 1u);
+  Out[((s * 2u) * p.F + f) * p.T + t] = er * mr - ei * mi;
+  Out[((s * 2u + 1u) * p.F + f) * p.T + t] = er * mi + ei * mr;
+}`);for(let[v,x]of F.entries())se(rr,[ne,j.splitIdx[v],gt[v],le(x.Wp,u,a,y)],[u,x.n,1]),ue("b",gt[v],j.split[v],re,j.splitB[v],{M:u,N:i,K:x.Wp,batch:x.n,sa:u*x.Wp,sb:x.Wp*i,c0:x.b0*u*i,sc:u*i,sbias:i});for(let[v,x]of j.blocks.entries()){let z=v%2===0,D=z?_:g,U=z?a:p,Y=z?p:a;Qe(re,Ee,p*u,i),ue("",Ee,x.qkvg,ut,null,{M:p*u,N:b,K:i}),se(ar,[ut,He,Ke,Ne,ct,z?$:O,z?T:L,x.gb,le(z?1:0,u,a,D,b)],[u,p,n]),se(or,[He,Ke,Ne,ft,le(U,D)],[Math.ceil(D/(Se*Me)),Y*n,1]),se(nr,[ft,ct,pt,le(z?1:0,u,a,D)],[u,p,n]),ue("r",pt,x.wo,re,null,{M:p*u,N:i,K:n*c}),Qe(re,Ee,p*u,i),ue("bg",Ee,x.w1,je,x.b1,{M:p*u,N:m,K:i}),ue("br",je,x.w2,re,x.b2,{M:p*u,N:i,K:m}),Qe(re,re,p*u,i,x.out)}ue("bt",re,j.mw[0],je,j.mb[0],{M:u,N:M,K:i,batch:p,sa:u*i,sb:i*M,sc:u*M,sbias:M}),ue("bt",je,j.mw[1],mt,j.mb[1],{M:u,N:M,K:M,batch:p,sa:u*M,sb:M*M,sc:u*M,sbias:M});for(let[v,x]of F.entries()){ue("b",mt,j.m2[v],wt[v],j.m2B[v],{M:u,N:2*x.Wp,K:M,batch:x.n,a0:x.b0*u*M,sa:u*M,sb:M*2*x.Wp,sc:u*2*x.Wp,sbias:2*x.Wp});let z=x.n*u*x.Wp;se(lr,[wt[v],dt,le(x.n*u,x.Wp,B[v])],[Math.min(Math.ceil(z/64),65535),Math.ceil(z/64/65535),1])}se(sr,[dt,_e,ae,ne,ht,le(a,l,y)],[Math.ceil(a/64),l*o,1]);let xt=e.createCommandEncoder();for(let v of[He,Ke,Ne])xt.clearBuffer(v);e.queue.submit([xt.finish()]);let Ve=new Float32Array(u*(y+1)),Te=e.createBuffer({size:4*l*a*4,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});return{steps:Ye.length,async run(v){Ve.fill(0);for(let U=0;U<o;U++)for(let Y=0;Y<2;Y++)for(let N=0;N<l;N++){let ee=((U*2+Y)*l+N)*a,Z=(N*o+U)*2+Y;for(let G=0;G<a;G++)Ve[G*(y+1)+Z]=v[ee+G]}e.queue.writeBuffer(ne,0,Ve);let x=e.createCommandEncoder(),z=x.beginComputePass();for(let[U,Y,N]of Ye)z.setPipeline(U),z.setBindGroup(0,Y),z.dispatchWorkgroups(...N);z.end(),x.copyBufferToBuffer(ht,0,Te,0,4*l*a*4),e.queue.submit([x.finish()]),await Te.mapAsync(GPUMapMode.READ);let D=new Float32Array(Te.getMappedRange().slice(0));return Te.unmap(),D}}}var Gt=br(()=>{});var vr=6.283185307179586,Mt=new Map,At=0,vt=null;function Mr(e){let r=e>>>1,t=new Float64Array(e),a=new Float64Array(r),l=new Float64Array(r+1),i=[t.subarray(0,r+1),l],n=2/e,s=31-Math.clz32(e),p=new Uint32Array(e);for(let y=0;y<e;y++){let _=0,g=y;for(let w=0;w<s;w++)_=_<<1|g&1,g>>=1;p[y]=_}let f=0,c=2,m=r,M=[];for(;m=m>>>1;){c=c<<1;let y=c>>>3,_=y>1?y-1:0;M.push({offset:f,count:_}),f+=_}let u=new Float64Array(f<<2);c=2,m=r;let h=0;for(;m=m>>>1;){c=c<<1;let y=c>>>3,_=vr/c,g=M[h].offset<<2;for(let w=1;w<y;w++){let F=w*_,d=Math.sin(F),k=Math.cos(F),A=g+(w-1<<2);u[A]=k,u[A+1]=d,u[A+2]=4*k*(k*k-.75),u[A+3]=4*d*(.75-d*d)}h++}let b={x:t,spectrum:a,complex:i,bSi:n,tw:u,stages:M,perm:p};return Mt.set(e,b),b}function $t(e){if(e===At)return vt;let r=Mt.get(e)||Mr(e);return At=e,vt=r,r}function $r(e){let r=e.length;if(r<2||r&r-1)throw Error("Input length must be a power of 2 (>= 2).");let t=$t(r),{x:a,tw:l,stages:o,perm:i}=t;for(let f=0;f<r;f++)a[f]=e[i[f]];for(let f=0,c=4;f<r;c*=4){for(let m=f;m<r;m+=c){let M=a[m]-a[m+1];a[m]+=a[m+1],a[m+1]=M}f=2*(c-1)}let n=2,s=r>>>1,p=0;for(;s=s>>>1;){let f=0;n=n<<1;let c=n<<1,m=n>>>2,M=n>>>3;do{if(m!==1)for(let b=f;b<r;b+=c){let y=b,_=y+m,g=_+m,w=g+m,F=a[g]+a[w];a[w]-=a[g],a[g]=a[y]-F,a[y]+=F,y+=M,_+=M,g+=M,w+=M,F=a[g]+a[w];let d=a[g]-a[w];F=-F*Math.SQRT1_2,d*=Math.SQRT1_2;let k=a[_];a[w]=F+k,a[g]=F-k,a[_]=a[y]-d,a[y]+=d}else for(let b=f;b<r;b+=c){let y=b,_=y+2,g=_+1,w=a[_]+a[g];a[g]-=a[_],a[_]=a[y]-w,a[y]+=w}f=(c<<1)-n,c=c<<2}while(f<r);let{offset:u,count:h}=o[p];for(let b=0;b<h;b++){let y=u+b<<2,_=l[y],g=l[y+1],w=l[y+2],F=l[y+3];f=0,c=n<<1;do{for(let d=f;d<r;d+=c){let k=d+b+1,A=k+m,E=A+m,P=E+m,S=d+m-b-1,j=S+m,R=j+m,$=R+m,T=a[R]*_-a[E]*g,O=a[R]*g+a[E]*_,L=a[$]*w-a[P]*F,q=a[$]*F+a[P]*w,I=T-L;T+=L,L=I,a[$]=T+a[j],a[E]=T-a[j];let W=q-O;O+=q,q=W,a[P]=q+a[A],a[R]=q-a[A],a[j]=a[k]-O,a[k]+=O,a[A]=L+a[S],a[S]-=L}f=(c<<1)-n,c=c<<2}while(f<r)}p++}return t}function Ft(e,r){let t=$r(e),a=e.length,l=a>>>1,{x:o,complex:i}=t;if(r){let s=r[0],p=r[1];for(let f=0;f<=l;f++)s[f]=o[f];p[0]=0,p[l]=0;for(let f=1;f<l;f++)p[f]=o[a-f];return r}let n=i[1];n[0]=0,n[l]=0;for(let s=1;s<l;s++)n[s]=o[a-s];return i}function Fr(e,r){let{x:t,tw:a,stages:l}=r,o=l.length,i=e<<1;for(let n=0;n<o;n++){i>>=1;let s=i>>>2,p=s>>>1,f=o-1-n,c=0,m=i<<1;do{for(let h=c;h<e;h+=m){let b=h,y=b+s,_=y+s,g=_+s,w=t[b]-t[_];t[b]+=t[_],t[y]+=t[y],t[g]+=t[g],t[_]=w-t[g],t[g]+=w}c=(m<<1)-i,m<<=2}while(c<e);if(p>=1){c=0,m=i<<1;do{for(let h=c;h<e;h+=m){let b=h+p,y=b+s,_=y+s,g=_+s,w=t[b]-t[y];t[b]+=t[y];let F=t[g]+t[_];t[y]=t[g]-t[_],F=-F*Math.SQRT2,w*=Math.SQRT2,t[_]=F+w,t[g]=F-w}c=(m<<1)-i,m<<=2}while(c<e)}let{offset:M,count:u}=l[f];for(let h=0;h<u;h++){let b=M+h<<2,y=a[b],_=a[b+1],g=a[b+2],w=a[b+3];c=0,m=i<<1;do{for(let F=c;F<e;F+=m){let d=F+h+1,k=d+s,A=k+s,E=A+s,P=F+s-h-1,S=P+s,j=S+s,R=j+s,$=t[d]-t[S];t[d]+=t[S];let T=t[P]-t[k];t[P]+=t[k];let O=t[R]+t[A];t[S]=t[R]-t[A];let L=t[E]+t[j];t[k]=t[E]-t[j];let q=$-L;$+=L,L=T-O,T+=O,t[j]=q*_-L*y,t[A]=q*y+L*_,t[E]=$*g-T*w,t[R]=$*w+T*g}c=(m<<1)-i,m<<=2}while(c<e)}}for(let n=0,s=4;n<e;s*=4){for(let p=n;p<e;p+=s){let f=t[p]-t[p+1];t[p]+=t[p+1],t[p+1]=f}n=2*(s-1)}}function kt(e,r,t){let l=e.length-1<<1;if(l<2||l&l-1)throw Error("Input must have N/2+1 bins where N is power of 2 (>= 2).");let o=$t(l),{x:i}=o,n=l>>>1;i[0]=e[0],i[n]=e[n];for(let f=1;f<n;f++)i[f]=e[f],i[l-f]=r[f];Fr(l,o);let{perm:s}=o,p=1/l;if(t&&t.buffer!==i.buffer){for(let f=0;f<l;f++)t[f]=i[s[f]]*p;return t}for(let f=0;f<l;f++){let c=s[f];if(f<c){let m=i[f];i[f]=i[c],i[c]=m}}for(let f=0;f<l;f++)i[f]*=p;if(t){for(let f=0;f<l;f++)t[f]=i[f];return t}return i}var Re=e=>e===0?1:Math.sin(Math.PI*e)/(Math.PI*e),_t=(e,r)=>r?_t(r,e%r):e,Et=e=>Math.ceil(16/e),$e=new Map;function kr(e,r){let t=Number.isInteger(e)&&Number.isInteger(r)?_t(e,r):0;if(!t)return null;let a=r/t,l=e/t,o=l+"/"+a,i=$e.get(o);if(i)return i;let n=e/r,s=n>1?1/n:1,p=Et(s),f=2*p;if(a*f>262144)return null;let c=new Float64Array(a*f),m=new Int32Array(a),M=new Int32Array(a);for(let u=0;u<a;u++){let h=f,b=0;for(let y=0;y<f;y++){let _=(y+1-p-u/a)*s;Math.abs(_)>=16||(c[u*f+y]=Re(_)*Re(_/16),y<h&&(h=y),b=y+1)}m[u]=h,M[u]=b}return $e.size>=8&&$e.delete($e.keys().next().value),$e.set(o,i={L:a,M:l,T:p,W:c,J0:m,J1:M}),i}function Le(e,{from:r,to:t}={}){if(!(r>0)||!(t>0))throw new RangeError("resample: from/to must be positive sample rates");if(r===t)return Float32Array.from(e);let a=r/t,l=e.length,o=Math.round(l*t/r),i=new Float32Array(o),n=a>1?1/a:1,s=Et(n),p=kr(r,t);if(p){let{L:h,M:b,W:y,J0:_,J1:g}=p,w=2*s;for(let F=0,d=0,k=0;F<o;F++){let A=k+1-s,E=d*w-A,P=0,S=0;for(let j=Math.max(0,A+_[d]),R=Math.min(l,A+g[d]);j<R;j++){let $=y[E+j];P+=e[j]*$,S+=$}if(i[F]=S!==0?P/S:0,(d+=b)>=h){let j=Math.floor(d/h);k+=j,d-=j*h}}return i}let f=new Float64Array(2*s),c=new Float64Array(2*s),m=new Float64Array(2*s),M=new Float64Array(2*s);for(let h=0,b=1-s;b<=s;b++,h++){let y=Math.PI*n*b;f[h]=Math.sin(y),c[h]=Math.cos(y),m[h]=Math.sin(y/16),M[h]=Math.cos(y/16)}let u=16/(Math.PI*Math.PI);for(let h=0;h<o;h++){let b=h*a,y=Math.floor(b),_=b-y,g=Math.PI*n*_,w=Math.sin(g),F=Math.cos(g),d=Math.sin(g/16),k=Math.cos(g/16),A=0,E=0;for(let P=0,S=1-s;S<=s;S++,P++){let j=y+S;if(j<0||j>=l)continue;let R=(S-_)*n;if(Math.abs(R)>=16)continue;let $=Math.abs(R)<.001?Re(R)*Re(R/16):(f[P]*F-c[P]*w)*(m[P]*k-M[P]*d)*u/(R*R);A+=e[j]*$,E+=$}i[h]=E!==0?A/E:0}return i}var Xe={wasm:()=>Promise.resolve().then(()=>J(Oe(),1)),webgpu:()=>Promise.resolve().then(()=>J(Oe(),1)),webgl:()=>Promise.resolve().then(()=>J(Oe(),1))};function Er(e){return!e||e==="auto"?"wasm":e}var zt=new Set(["webgpu","coreml"]),Pr=e=>e,rt=new Map;function Wt(e){if(!1)throw new Error(`neural-runtime: backend '${e}' needs a browser (onnxruntime-web) \u2014 Node runs backend 'node' (onnxruntime-node), and 'webgpu' and 'coreml' as its providers`);if(!!1&&e==="node")throw new Error("neural-runtime: backend 'node' needs Node.js (onnxruntime-node) \u2014 in a browser use 'wasm' or 'webgpu' (onnxruntime-web)");if(!Object.hasOwn(Xe,e))throw new Error(`neural-runtime: unknown backend '${e}' (want 'auto', 'node', 'wasm', 'webgpu', or 'webgl')`);let r=rt.get(e);return r||(r=Xe[e]().then(t=>t.default??t).catch(t=>{rt.delete(e);let a="onnxruntime-web";throw new Error(`neural-runtime: ${a} is required for backend '${e}' \u2014 install it: npm install ${a} (${t.message})`)}),rt.set(e,r)),r}var jr=new Map([[Float32Array,"float32"],[Int32Array,"int32"],[BigInt64Array,"int64"],[Uint8Array,"uint8"]]);function he(e,r,t){if(!r)throw new Error("neural-runtime: tensor() needs dims");if(!t&&(t=jr.get(e?.constructor),!t&&Array.isArray(e)&&e.every(a=>typeof a=="string")&&(t="string"),!t))throw new Error(`neural-runtime: tensor() can't infer a type for ${e?.constructor?.name??typeof e} \u2014 pass type explicitly`);return{data:e,dims:r,type:t}}function Sr(e,r){if(!r||r.data==null||!r.dims||!r.type)throw new Error("neural-runtime: feed tensor needs { data, dims, type } \u2014 build it with tensor()");return new e.Tensor(r.type,r.data,r.dims)}function Tr(e){return{data:e.data,dims:Array.from(e.dims),type:e.type}}function Ot(e,r){let t=e[r+"Names"]||[],a;try{a=e[r+"Metadata"]}catch{}return a?a.map((l,o)=>l.isTensor?{name:l.name??t[o],dims:Array.from(l.shape),type:l.type}:{name:l.name??t[o]}):t.map(l=>({name:l}))}async function qt(){if(!1){let t=await Wt("node").catch(()=>null),a=new Set((t?.listSupportedBackends?.()??[]).map(l=>l.name));return["node",...[...zt].filter(l=>a.has(l))]}let e=["wasm"],r=typeof navigator<"u"&&await navigator.gpu?.requestAdapter().catch(()=>null);return r&&!r.info?.isFallbackAdapter&&r.info?.architecture!=="swiftshader"&&e.push("webgpu"),e}async function Rr(e,r){if(e instanceof Uint8Array)return e;if(e instanceof ArrayBuffer)return new Uint8Array(e);if(typeof e=="string")return We(e,r);throw new Error("neural-runtime: load() expects a URL string, Uint8Array, or ArrayBuffer")}async function It(e,r={}){let t=await Rr(e,r),a=Er(r.backend),l=Pr(a),o=await Wt(l);r.wasmPaths!==void 0&&o.env?.wasm&&(o.env.wasm.wasmPaths=r.wasmPaths),r.threads!==void 0&&o.env?.wasm&&(o.env.wasm.numThreads=r.threads),r.logLevel!==void 0&&o.env&&(o.env.logLevel=r.logLevel);let i={...r.sessionOptions},n=r.executionProviders??(a==="node"?void 0:[a]);n&&(i.executionProviders=n),r.graphOptimizationLevel&&(i.graphOptimizationLevel=r.graphOptimizationLevel);let s;try{s=await o.InferenceSession.create(t,i)}catch(c){throw new Error(`neural-runtime: failed to load model \u2014 ${c.message}`)}let p=!1,f=Promise.resolve();return{inputs:Ot(s,"input"),outputs:Ot(s,"output"),backend:a,async run(c,m){if(p)throw new Error("neural-runtime: run() called after free()");let M={};for(let _ in c)M[_]=Sr(o,c[_]);let u=()=>m?s.run(M,m):s.run(M),h=f.then(u,u);f=h.then(()=>{},()=>{});let b=await h,y={};for(let _ in b)y[_]=Tr(b[_]);return y},free(){p||(p=!0,s.release().catch(()=>{}))}}}async function Bt(e,r){let t=e.body;if(!t?.getReader){let s=new Uint8Array(await e.arrayBuffer());return r(s.length),s}let a=t.getReader(),l=[],o=0;for(;;){let{done:s,value:p}=await a.read();if(s)break;l.push(p),o+=p.length,r(o)}let i=new Uint8Array(o),n=0;for(let s of l)i.set(s,n),n+=s.length;return i}async function Lr(e){let[{readFileSync:r},{fileURLToPath:t}]=await Promise.all([Promise.resolve().then(()=>J(be(),1)),Promise.resolve().then(()=>J(Fe(),1))]);return new Uint8Array(r(t(e)))}async function Or(e){let[r,t,a]=await Promise.all([Promise.resolve().then(()=>J(ze(),1)),Promise.resolve().then(()=>J(et(),1)),Promise.resolve().then(()=>J(tt(),1))]),l=process.env.AUDIO_NEURAL_CACHE||r.join(t.homedir(),".cache","audiojs","neural"),o=r.join(l,a.createHash("sha256").update(e).digest("hex"));return{dir:l,file:o}}async function zr(e){let r=await Promise.resolve().then(()=>J(be(),1));if(!r.existsSync(e)||!r.existsSync(e+".size"))return null;let t=Number(r.readFileSync(e+".size","utf8")),a=r.readFileSync(e);return a.length!==t?null:new Uint8Array(a.buffer,a.byteOffset,a.byteLength)}async function Wr(e,r,t){let a=await Promise.resolve().then(()=>J(be(),1));a.mkdirSync(e,{recursive:!0}),a.writeFileSync(r,t),a.writeFileSync(r+".size",String(t.length))}async function qr(e,{cache:r,progress:t,fetch:a}){let l,o;if(r){({dir:l,file:o}=await Or(e));let p=await zr(o);if(p)return t?.({loaded:p.length,total:p.length}),p}let i=await a(e);if(!i.ok)throw new Error(`neural-runtime: fetch failed for ${e}: ${i.status} ${i.statusText}`);let n=Number(i.headers.get("content-length"))||null,s=await Bt(i,p=>t?.({loaded:p,total:n}));return r&&await Wr(l,o,s),s}async function Ir(e,{cache:r,progress:t,fetch:a}){let l=r&&typeof caches<"u"?await caches.open("audio-neural"):null;if(l){let n=await l.match(e);if(n){let s=new Uint8Array(await n.arrayBuffer());return t?.({loaded:s.length,total:s.length}),s}}let o=await a(e);if(!o.ok)throw new Error(`neural-runtime: fetch failed for ${e}: ${o.status} ${o.statusText}`);l?.put(e,o.clone()).catch(n=>console.warn(`neural-runtime: ${e} not cached (${n.message})`));let i=Number(o.headers.get("content-length"))||null;return Bt(o,n=>t?.({loaded:n,total:i}))}async function We(e,r={}){let t=String(e),{cache:a=!0,progress:l,fetch:o}=r;if(t.startsWith("file://")){if(!!1)throw new Error("neural-runtime: file:// URLs are only readable in Node");let n=await Lr(t);return l?.({loaded:n.length,total:n.length}),n}let i=o||globalThis.fetch;if(!i)throw new Error("neural-runtime: no fetch available in this environment \u2014 pass opts.fetch");return Ir(t,{cache:a,progress:l,fetch:i})}async function Ct(e,r){let t=await We(e,r);return JSON.parse(new TextDecoder().decode(t))}var Cr=Math.PI*2,ke=globalThis.process?.release?.name==="node",Ht=new Map;function Ae(e){let r=Ht.get(e);if(!r){r=new Float64Array(e);for(let t=0;t<e;t++)r[t]=.5-.5*Math.cos(Cr*t/e);Ht.set(e,r)}return r}function qe(e,r){if(r===1)return 0;let t=2*(r-1);return e=(e%t+t)%t,e<r?e:t-e}function me(e,r){let t=e.length/r,a=new Array(t);for(let l=0;l<t;l++)a[l]=e.subarray(l*r,(l+1)*r);return a}function Be(e,r,t,a,l){let o=e.length,i=(r>>1)+1,n=l?r>>1:0,s=l?1+Math.floor(o/t):o<r?0:1+Math.floor((o-r)/t),p=new Float64Array(s*i),f=new Float64Array(s*i),c=new Float64Array(r);for(let m=0;m<s;m++){let M=m*t-n;if(M<0||M+r>o)for(let b=0;b<r;b++)c[b]=(l?e[qe(M+b,o)]:e[M+b]??0)*a[b];else for(let b=0;b<r;b++)c[b]=e[M+b]*a[b];let[u,h]=Ft(c);p.set(u,m*i),f.set(h,m*i)}return{re:p,im:f,T:s,bins:i}}function Ce(e,r,t,a,l,o,i){for(let n=0;n<e.length;n++){let s=kt(e[n],r[n]);for(let p=0,f=(a+n)*o;p<l;p++)t[f+p]+=s[p]*i[p]}}function Ue(e,r,t,a){let l=new Float64Array(e>0?(e-1)*t+r:0);for(let o=0;o<e;o++)for(let i=0;i<r;i++)l[o*t+i]+=a[i]*a[i];return l}function De(e,r,t,a,l){let o=a?t>>1:0;l??(l=Math.max(0,e.length-2*o));let i=new Float32Array(l);for(let n=0,s=o;n<l&&s<e.length;n++,s++)r[s]>1e-8&&(i[n]=e[s]/r[s]);return i}function Ur(e,r,t,a,l,{iterations:o=1,softmask:i=!1,residual:n=!1,eps:s=1e-10,scaleFactor:p=10}={}){let f=e.length,c=t.length,m=c+(n?1:0),M=a*l,u=1;if(o>0){let g=0;for(let w=0;w<f;w++){let F=e[w],d=r[w];for(let k=0;k<M;k++){let A=F[k]*F[k]+d[k]*d[k];A>g&&(g=A)}}u=1/Math.max(1,Math.sqrt(g)/p)}let h=Array.from({length:m},()=>Array.from({length:f},()=>new Float64Array(M))),b=Array.from({length:m},()=>Array.from({length:f},()=>new Float64Array(M))),y=new Float64Array(M),_=new Float64Array(M);for(let g=0;g<f;g++){let w=e[g],F=r[g];if(i){y.fill(s);for(let d=0;d<c;d++){let k=t[d][g];for(let A=0;A<M;A++)y[A]+=k[A]}for(let d=0;d<c;d++){let k=t[d][g],A=h[d][g],E=b[d][g];for(let P=0;P<M;P++){let S=k[P]/y[P]*u;A[P]=S*w[P],E[P]=S*F[P]}}}else{for(let d=0;d<M;d++){let k=Math.sqrt(w[d]*w[d]+F[d]*F[d]);y[d]=(k>0?w[d]/k:1)*u,_[d]=k>0?F[d]/k*u:0}for(let d=0;d<c;d++){let k=t[d][g],A=h[d][g],E=b[d][g];for(let P=0;P<M;P++)A[P]=k[P]*y[P],E[P]=k[P]*_[P]}}if(n){let d=h[c][g],k=b[c][g];for(let A=0;A<M;A++)d[A]=w[A]*u,k[A]=F[A]*u;for(let A=0;A<c;A++){let E=h[A][g],P=b[A][g];for(let S=0;S<M;S++)d[S]-=E[S],k[S]-=P[S]}}}return o>0&&Dr(h,b,e,r,a,l,o,s,u),{Yr:h,Yi:b}}function Dr(e,r,t,a,l,o,i,n,s){let p=e.length,f=t.length,c=l*o,m=[];for(let _=0;_<f;_++)for(let g=_;g<f;g++)m.push([_,g]);let M=Array.from({length:p},()=>new Float64Array(c)),u=Array.from({length:p},()=>m.map(()=>new Float64Array(o))),h=Array.from({length:p},()=>m.map(()=>new Float64Array(o))),b=new Float64Array(o),y=Math.sqrt(n);for(let _=0;_<i;_++){for(let w=0;w<p;w++){let F=M[w];F.fill(0);for(let d=0;d<f;d++){let k=e[w][d],A=r[w][d];for(let E=0;E<c;E++)F[E]+=k[E]*k[E]+A[E]*A[E]}for(let d=0;d<c;d++)F[d]/=f;b.fill(n);for(let d=0;d<c;d+=o)for(let k=0;k<o;k++)b[k]+=F[d+k];m.forEach(([d,k],A)=>{let E=e[w][d],P=r[w][d],S=e[w][k],j=r[w][k],R=u[w][A],$=h[w][A];R.fill(0),$.fill(0);for(let T=0;T<c;T+=o)for(let O=0,L=T;O<o;O++,L++)R[O]+=E[L]*S[L]+P[L]*j[L],$[O]+=P[L]*S[L]-E[L]*j[L];for(let T=0;T<o;T++)R[T]/=b[T],$[T]/=b[T]})}let g=_===i-1?1/s:1;f===2?Gr(e,r,t,a,M,u,h,c,o,y,s,g):Hr(e,r,t,a,M,u,h,m,c,o,y,s,g)}}function Gr(e,r,t,a,l,o,i,n,s,p,f,c){let m=l.length,M=new Float64Array(s*m*4),u=new Float64Array(n*m),h=new Float64Array(n*m*4);for(let w=0;w<m;w++){let F=o[w][0],d=o[w][1],k=i[w][1],A=o[w][2],E=l[w];for(let P=0,S=w*4;P<s;P++,S+=m*4)M[S]=F[P],M[S+1]=d[P],M[S+2]=k[P],M[S+3]=A[P];for(let P=0,S=w;P<n;P++,S+=m)u[S]=E[P]}let[b,y]=t,[_,g]=a;for(let w=0;w<n;w+=s)for(let F=0,d=w;F<s;F++,d++){let k=p,A=p,E=0,P=0,S=F*m*4,j=d*m;for(let H=0,V=S;H<m;H++,V+=4){let Q=u[j+H];k+=Q*M[V],E+=Q*M[V+1],P+=Q*M[V+2],A+=Q*M[V+3]}let R=k*A-E*E-P*P,$=R!==0?1/R:0,T=b[d]*f,O=_[d]*f,L=y[d]*f,q=g[d]*f,I=(A*T-E*L+P*q)*$,W=(A*O-E*q-P*L)*$,B=(k*L-E*T-P*O)*$,C=(k*q-E*O+P*T)*$;for(let H=0,V=S,Q=j*4;H<m;H++,V+=4,Q+=4){let te=u[j+H]*c,_e=M[V],ae=M[V+1],ne=M[V+2],re=M[V+3];h[Q]=te*(_e*I+ae*B-ne*C),h[Q+1]=te*(_e*W+ae*C+ne*B),h[Q+2]=te*(ae*I+ne*W+re*B),h[Q+3]=te*(ae*W-ne*I+re*C)}}for(let w=0;w<m;w++){let F=e[w][0],d=r[w][0],k=e[w][1],A=r[w][1];for(let E=0,P=w*4;E<n;E++,P+=m*4)F[E]=h[P],d[E]=h[P+1],k[E]=h[P+2],A[E]=h[P+3]}}function Hr(e,r,t,a,l,o,i,n,s,p,f,c,m){let M=l.length,u=t.length,h=u*u,b=new Float64Array(h),y=new Float64Array(h),_=new Float64Array(h),g=new Float64Array(h),w=new Float64Array(2*h),F=new Float64Array(2*h),d=new Float64Array(u),k=new Float64Array(u),A=new Float64Array(h),E=new Float64Array(h),P=(S,j)=>n.forEach(([R,$],T)=>{A[R*u+$]=o[S][T][j],E[R*u+$]=i[S][T][j],A[$*u+R]=o[S][T][j],E[$*u+R]=-i[S][T][j]});for(let S=0;S<s;S+=p)for(let j=0,R=S;j<p;j++,R++){b.fill(0),y.fill(0);for(let $=0;$<M;$++){let T=l[$][R];P($,j);for(let O=0;O<h;O++)b[O]+=T*A[O],y[O]+=T*E[O]}for(let $=0;$<u;$++)b[$*u+$]+=f;Kr(b,y,_,g,u,w,F);for(let $=0;$<u;$++){let T=0,O=0;for(let L=0;L<u;L++){let q=_[$*u+L],I=g[$*u+L],W=t[L][R]*c,B=a[L][R]*c;T+=q*W-I*B,O+=q*B+I*W}d[$]=T,k[$]=O}for(let $=0;$<M;$++){let T=l[$][R]*m;P($,j);for(let O=0;O<u;O++){let L=0,q=0;for(let I=0;I<u;I++){let W=A[O*u+I],B=E[O*u+I];L+=W*d[I]-B*k[I],q+=W*k[I]+B*d[I]}e[$][O][R]=T*L,r[$][O][R]=T*q}}}}function Kr(e,r,t,a,l,o,i){let n=l*2;for(let s=0;s<l;s++){for(let p=0;p<l;p++)o[s*n+p]=e[s*l+p],i[s*n+p]=r[s*l+p];for(let p=l;p<n;p++)o[s*n+p]=0,i[s*n+p]=0;o[s*n+l+s]=1}for(let s=0;s<l;s++){let p=s,f=o[s*n+s]**2+i[s*n+s]**2;for(let u=s+1;u<l;u++){let h=o[u*n+s]**2+i[u*n+s]**2;h>f&&(f=h,p=u)}if(p!==s)for(let u=0;u<n;u++){let h=o[s*n+u];o[s*n+u]=o[p*n+u],o[p*n+u]=h;let b=i[s*n+u];i[s*n+u]=i[p*n+u],i[p*n+u]=b}let c=o[s*n+s],m=i[s*n+s],M=c*c+m*m||1e-300;for(let u=0;u<n;u++){let h=o[s*n+u],b=i[s*n+u];o[s*n+u]=(h*c+b*m)/M,i[s*n+u]=(b*c-h*m)/M}for(let u=0;u<l;u++){if(u===s)continue;let h=o[u*n+s],b=i[u*n+s];if(!(h===0&&b===0))for(let y=0;y<n;y++){let _=o[s*n+y],g=i[s*n+y];o[u*n+y]-=h*_-b*g,i[u*n+y]-=h*g+b*_}}}for(let s=0;s<l;s++)for(let p=0;p<l;p++)t[s*l+p]=o[s*n+l+p],a[s*l+p]=i[s*n+l+p]}var Ie=["drums","bass","other","vocals"],Kt={modelType:"complex",sampleRate:44100,targets:Ie,n:4096,hop:1024,window:"ones",normalized:!0,segment:485100,frames:476},Nr={modelType:"multires",sampleRate:44100,targets:["dialogue","music","effects"],sources:["music","dialogue","effects"],windows:[1024,2048,8192],hop:256,loudness:-27,mono:!0,chunk:20,script:"export-mrx.py"},Yr={modelType:"complex",sampleRate:44100,targets:["dialogue","music","effects"],sources:["dialogue","music","effects"],n:2048,hop:512,window:"hann",normalized:!1,segment:529200,frames:1034,step:1/3,fade:0,pad:"zero",standardize:!1,mono:!0,script:"export-tiger.py"},Qr={modelType:"complex",sampleRate:44100,targets:["vocals"],sources:["vocals"],n:2048,hop:441,window:"hann",normalized:!1,segment:352800,frames:801,step:.5,standardize:!1,gpu:!0,script:"export-roformer.py",engine:{meta:"mel-roformer.engine.json",bin:"mel-roformer.engine.bin",sha256:"140fedcd9d03a8f918b235688c69f4dfdd86b08f9d430277659c095688a026ff"}},Jr={modelType:"complex",sampleRate:44100,targets:["dry"],sources:["dry"],n:2048,hop:512,window:"hann",normalized:!1,segment:384e3,frames:751,step:.5,standardize:!1,mono:!0,gpu:!0,script:"export-roformer.py"},xe={"scnet-large":{file:"scnet-large.int8.onnx",repo:"audiojs/scnet-large",sha256:"b2dc586a1e0e6c0afe4915e9057ea29111397b7bbf589edc3d85de91de79cd72"},scnet:{file:"scnet.int8.onnx",repo:"audiojs/scnet",sha256:"98228931494151762a1c4ab1ec7899a894b1f81fd4a509921a9d2f9bacc50845"},mrx:{file:"mrx.int8.onnx",repo:"audiojs/mrx",sha256:"d876c92d224f5d8cd2207d528b23369da895a6de71fb24132416fcb16f9f8424"},tiger:{file:"tiger.int8.onnx",repo:"audiojs/tiger-dnr",sha256:"2189859ac7e89cf4d9d284c6f393e737aaa2b3233ed7ee424ad622012bce7bca"},"mel-roformer":{file:"mel-roformer.fp16.onnx",repo:"audiojs/mel-roformer",sha256:"adcbbb826f12453fbb86652b503242d565a9c81cdef1bca2fe0e54752eba91ef"},"dereverb-room":{file:"dereverb-room.fp16.onnx",repo:"audiojs/dereverb-room",sha256:"99797e086a71d1cb57d50f3b5be93dcb7c89c49d1537c60487a488a24aaee9ee"}},nt={"scnet-large":"95f22d9e68f6cab78aef358f1a0de248d4edf805",scnet:"e71bcdb42bce1d62b7fae25ba90fcbcf90f73f46",mrx:"dedc823a0bea2ed085d19e8b7f32589d35169ee8",tiger:"1c959ab7ff8794dc5663b104ba301687ab95d2ab","mel-roformer":"c1aba02c00a0bee852d6754fe6ede8164f90a4b3","dereverb-room":"b4c2d14da9f2199099656195b06fd8253fd16e1d"},ot=e=>we[e].repo&&nt[e]?`https://huggingface.co/${we[e].repo}/resolve/${nt[e]}/${we[e].file}`:null,we={umxhq:{modelType:"openunmix",sampleRate:44100,targets:["vocals","drums","bass","other"],perTarget:!0},htdemucs:{modelType:"hybrid",sampleRate:44100,targets:Ie},htdemucs_ft:{modelType:"hybrid",sampleRate:44100,targets:Ie,perTarget:!0},"scnet-large":{...Kt,...xe["scnet-large"]},scnet:{...Kt,...xe.scnet},mrx:{...Nr,...xe.mrx},tiger:{...Yr,...xe.tiger},"mel-roformer":{...Qr,...xe["mel-roformer"]},"dereverb-room":{...Jr,...xe["dereverb-room"]}};async function Vr(){if(process.env.AUDIO_NEURAL_CACHE)return process.env.AUDIO_NEURAL_CACHE;let[e,r]=await Promise.all([Promise.resolve().then(()=>J(ze(),1)),Promise.resolve().then(()=>J(et(),1))]);return e.join(r.homedir(),".cache","audiojs","neural")}async function Yt(e,r){let t=e.weights;if(t==null&&!ke)throw new Error(`neural-separate: model '${r}' needs opts.weights in the browser: the URL its files are served from (${r}/<file>.onnx)`);if(t==null&&(t=await Vr()),/^[a-z][a-z0-9+.-]+:/i.test(t))return t.endsWith("/")?t:t+"/";if(!ke)throw new Error(`neural-separate: opts.weights must be a URL in the browser, got '${t}'`);let{pathToFileURL:a}=await Promise.resolve().then(()=>J(Fe(),1));return a(t.endsWith("/")?t:t+"/").href}async function Zr(e,r,t){let[a,{fileURLToPath:l}]=await Promise.all([Promise.resolve().then(()=>J(be(),1)),Promise.resolve().then(()=>J(Fe(),1))]),o=m=>typeof m.spec=="string"&&m.spec.startsWith("file:")?l(m.spec):null,i=m=>!o(m)||a.existsSync(o(m)),n=we[r],s="",p=m=>({...m,spec:m.spec.replace(/[^/]*$/,`${r}.onnx`),sha256:null});n.file&&(e=await Promise.all(e.map(async m=>{if(!o(m))return m;let M=t.weights==null;if(i(m)&&(!M||await Qt(a.readFileSync(o(m)))===n.sha256))return{...m,sha256:null};if(i(p(m)))return p(m);if(M&&ot(r))try{return{...m,spec:await ra(r,o(m)),sha256:null}}catch(u){s=` (${u.message})`}return{...m,sha256:null}})));let f=e.filter(m=>!i(m)).map(o);if(!f.length)return e;let c=n.script??{hybrid:"export-htdemucs.py",complex:"export-scnet.py"}[n.modelType]??"export-openunmix.py";throw new Error(`neural-separate: ${r} weights not found: ${f.join(", ")}${s}. Produce them with python3 node_modules/@audio/neural-separate/scripts/${c} --model ${r}`+(n.file?` (and scripts/compact.py --model ${r} for ${n.file})`:"")+`, or pass opts.weights: a URL or directory holding ${r}/<file>.onnx`)}var Xr=6e4,ge=null;function ea(e,r){let t=e.model,a=`${t}:${e.weights??""}:${r.engine.sha256}`;if(ge?.key===a)return clearTimeout(ge.timer),ge.session;ge?.session.then(o=>o?.drop());let l={key:a,timer:null};return l.session=ta(e,r,t).then(o=>o&&{...o,drop:o.free,free(){clearTimeout(l.timer),l.timer=setTimeout(()=>{ge===l&&(ge=null),o.free()},Xr)}}),(ge=l).session}async function ta(e,r,t){let{engine:a,gpu:l}=await Promise.resolve().then(()=>(Gt(),Dt)),o=await l();if(!o)return null;try{let i=e.weights!=null?`${await Yt(e,t)}${t}/`:`https://huggingface.co/${r.repo}/resolve/${nt[t]}/`,[n,s]=await Promise.all([Ct(i+r.engine.meta),lt(i+r.engine.bin,r.engine.sha256)]);return await a(n,s,o)}catch(i){return o.destroy(),console.warn(`neural-separate: ${t}'s own engine stands aside (${i.message})`),null}}async function ra(e,r){let[t,a,{pathToFileURL:l}]=await Promise.all([Promise.resolve().then(()=>J(be(),1)),Promise.resolve().then(()=>J(ze(),1)),Promise.resolve().then(()=>J(Fe(),1))]),o=await lt(ot(e),we[e].sha256,{cache:!1});return t.mkdirSync(a.dirname(r),{recursive:!0}),t.writeFileSync(r+".part",o),t.renameSync(r+".part",r),l(r).href}async function aa(e){let r=e.model;if(r==null)throw new Error("neural-separate: opts.model is required (preset name | url | bytes | {target: url, ...} | {url, targets})");let t=e.targets,a=o=>t?o.filter(i=>t.includes(i)):o;if(typeof r=="string"&&Object.hasOwn(we,r)){let o=we[r],i=!ke&&e.weights==null&&ot(r),n=i?"":await Yt(e,r);if(t){for(let c of t)if(!o.targets.includes(c))throw new Error(`neural-separate: ${r} has no target '${c}' (has ${o.targets.join(", ")})`)}let s=a(o.targets),p=o.sources??(o.modelType==="hybrid"||o.modelType==="complex"?Ie:null),f=o.perTarget?s.map(c=>({spec:`${n}${r}/${c}.onnx`,sources:p??[c],keep:[c]})):[{spec:i||`${n}${r}/${o.file??`${r}.onnx`}`,sources:p??o.targets,keep:s,sha256:o.sha256}];return ke&&(f=await Zr(f,r,e)),{graphs:f,modelType:o.modelType,sampleRate:o.sampleRate,targets:s,preset:o}}let l;if(typeof r=="string"||r instanceof Uint8Array)l=[{spec:r,sources:["stem"],keep:["stem"]}];else if(r.url!=null&&Array.isArray(r.targets))l=[{spec:r.url,sources:r.targets,keep:a(r.targets)}];else{let o=Object.keys(r);if(!o.length)throw new Error("neural-separate: opts.model target map is empty");l=a(o).map(i=>{let n=r[i];return n?.url!=null&&Array.isArray(n.targets)?{spec:n.url,sources:n.targets,keep:[i]}:{spec:n,sources:[i],keep:[i]}})}if(l=l.filter(o=>o.keep.length),!l.length)throw new Error(`neural-separate: none of targets ${t} is in the model`);return{graphs:l,modelType:e.modelType??"openunmix",sampleRate:null,targets:l.flatMap(o=>o.keep)}}var na={enableCpuMemArena:!1,enableMemPattern:!1};function oa(e,r){let t=e.device??(r?.gpu?qt().then(l=>l.includes("webgpu")?"webgpu":void 0):void 0),a=!e.device&&!e.session&&r?.engine&&!ke?ea(e,r):null;return async l=>{if(e.session)return e.session(l.spec,e);let o=a&&await a;if(o)return o;let i=l.sha256&&!l.spec.startsWith("file:")?await lt(l.spec,l.sha256):l.spec;return It(i,{backend:await t,sessionOptions:na,wasmPaths:e.wasmPaths})}}async function lt(e,r,t){let a=await We(e,t),l=await Qt(a);if(l!==r)throw new Error(`neural-separate: ${e} has SHA-256 ${l}, expected ${r}: a partial or altered download (clear the 'audio-neural' cache), or another build of the file`);return a}async function Qt(e){let r=globalThis.crypto?.subtle??(await Promise.resolve().then(()=>J(tt(),1))).webcrypto.subtle;return Array.from(new Uint8Array(await r.digest("SHA-256",e)),t=>t.toString(16).padStart(2,"0")).join("")}function ve(e,r,t=0){let a=e.outputs?.[t]?.name;if(a&&r[a])return r[a];let l=Object.values(r);if(!l[t])throw new Error(`neural-separate: model returned ${l.length} output(s), expected at least ${t+1}`);return l[t]}async function Ge(e,r,t,a,l,o,i){let n=null,s=new Float64Array(e);for(let f=0;f<t.length;f++){let c=t[f],m=Math.min(a,e-c);i?.({chunk:f+1,totalChunks:t.length});let M=await o(c,m);if(!n){n={};for(let h in M)n[h]=Array.from({length:r},()=>new Float64Array(e))}let u=new Float64Array(m);for(let h=0;h<m;h++)u[h]=l(h,m),s[c+h]+=u[h];for(let h in M)for(let b=0;b<r;b++){let y=M[h][b],_=n[h][b];for(let g=0;g<m;g++)_[c+g]+=y[g]*u[g]}}let p={};for(let f in n)p[f]=n[f].map(c=>{let m=new Float32Array(e);for(let M=0;M<e;M++)s[M]>0&&(m[M]=c[M]/s[M]);return m});return p}function st(e,r,t){let a=t.chunk??30,l=t.overlap??2;if(l>=a)throw new Error("neural-separate: opts.overlap must be smaller than opts.chunk");let o=Math.max(1,Math.round(a*r)),i=Math.max(0,Math.round(l*r)),n=[0];if(e>o){n=[];for(let p=0;p<e&&(n.push(p),!(p+o>=e));p+=o-i);}return{starts:n,size:o,weight:i?(p,f)=>Math.min(1,(p+.5)/i,(f-p-.5)/i):()=>1}}var Jt=(e,r,t)=>e.map(a=>a.subarray(r,r+t));function la(e,r,t){let a=e.length,l=new Float32Array(a*t*r);return e.forEach(({re:o,im:i},n)=>{for(let s=0,p=n*t*r;s<r;s++)for(let f=0,c=s*t;f<t;f++,c++)l[p+f*r+s]=Math.sqrt(o[c]*o[c]+i[c]*i[c])}),he(l,[1,a,t,r],"float32")}function sa(e,r,t,a,l,o,i,n,s){return Array.from({length:a},(p,f)=>{let c=new Float64Array((n-i)*o),m=r+f*o*l,M=f*o*l;if(s)for(let u=0;u<o;u++)for(let h=i,b=u;h<n;h++,b+=o)c[b]=e[m+u*l+h]*t[M+u*l+h];else for(let u=0;u<o;u++)for(let h=i,b=u;h<n;h++,b+=o)c[b]=e[m+u*l+h];return c})}async function ia(e,r,t,a,l,o){let i=t.n??4096,n=t.hop??1024,s=Ae(i),p=t.wiener??1,f=t.wienerWindow??300,c=a.flatMap(h=>h.keep),m=c.length===1&&p>0,M={iterations:p,softmask:t.softmask??!1,eps:t.eps,residual:m},u=[];try{for(let w of a)u.push(await o(w));let h=e.length,b=e[0].length,{starts:y,size:_,weight:g}=st(b,r,t);return await Ge(b,h,y,_,g,async(w,F)=>{let d=Jt(e,w,F).map($=>Be($,i,n,s,!0)),{T:k,bins:A}=d[0],E=la(d,k,A),P={};for(let $=0;$<a.length;$++){let T=u[$],O=ve(T,await T.run({[T.inputs?.[0]?.name??"input"]:E}));for(let L of a[$].keep)P[L]={data:O.data,base:a[$].sources.indexOf(L)*h*A*k}}let S=c.map(()=>Array.from({length:h},()=>new Float64Array((k-1)*n+i)));for(let $=0;$<k;$+=f){let T=Math.min(k,$+f),O=W=>W.subarray($*A,T*A),L=c.map(W=>sa(P[W].data,P[W].base,E.data,h,k,A,$,T,l==="mask")),{Yr:q,Yi:I}=Ur(d.map(W=>O(W.re)),d.map(W=>O(W.im)),L,T-$,A,M);c.forEach((W,B)=>{for(let C=0;C<h;C++)Ce(me(q[B][C],A),me(I[B][C],A),S[B][C],$,i,n,s)})}let j=Ue(k,i,n,s),R={};return c.forEach(($,T)=>{R[$]=S[T].map(O=>De(O,j,i,!0,F))}),R},t.progress)}finally{for(let h of u)h.free?.()}}function Vt(e){let r=e.length,t=e[0].length,a=new Float64Array(t),l=0,o=0;for(let n of e)for(let s=0;s<t;s++)a[s]+=n[s]/r;for(let n=0;n<t;n++)l+=a[n];l/=t;for(let n=0;n<t;n++)o+=(a[n]-l)**2;let i=Math.sqrt(o/Math.max(1,t-1))+1e-8;return{norm:e.map(n=>Float32Array.from(n,s=>(s-l)/i)),back:n=>{for(let s=0;s<n.length;s++)n[s]=n[s]*i+l;return n},scale:n=>{for(let s=0;s<n.length;s++)n[s]*=i;return n}}}async function ua(e,r,t,a,l){let o=r.length,i=r[0].length,n=Ae(a),s=Math.ceil(i/l),p=(l>>1)*3,f=a>>1,c=f+1,m=1/Math.sqrt(a),M=new Float32Array(o*2*f*s),u=new Float32Array(o*i);r.forEach((k,A)=>{let E=new Float64Array(s*l+2*p);for(let $=0;$<E.length;$++)E[$]=k[qe($-p,i)];let{re:P,im:S}=Be(E,a,l,n,!0),j=M.subarray(2*A*f*s),R=M.subarray((2*A+1)*f*s);for(let $=0,T=0;$<f;$++)for(let O=0,L=2*c+$;O<s;O++,L+=c,T++)j[T]=P[L]*m,R[T]=S[L]*m;u.set(k,A*i)});let h=e.inputs??[{name:"mix"},{name:"mix_spec"}],b=await e.run({[h[0].name]:he(u,[1,o,i],"float32"),[h[1].name]:he(M,[1,2*o,f,s],"float32")}),y=ve(e,b,0).data,_=ve(e,b,1).data,g=s+4,w=l*s+2*p,F=Math.sqrt(a),d=Ue(g,a,l,n);return t.map(k=>Array.from({length:o},(A,E)=>{let P=new Float64Array(g*c),S=new Float64Array(g*c),j=(k*2*o+2*E)*f*s;for(let L=0,q=j;L<f;L++)for(let I=0,W=2*c+L;I<s;I++,W+=c,q++)P[W]=y[q]*F,S[W]=y[q+f*s]*F;let R=new Float64Array((g-1)*l+a);Ce(me(P,c),me(S,c),R,0,a,l,n);let $=De(R,d,a,!0,w),T=new Float32Array(i),O=(k*o+E)*i;for(let L=0;L<i;L++)T[L]=$[p+L]+_[O+L];return T}))}async function fa(e,r,t,a,l){let o=t.n??4096,i=t.hop??1024,n=e.length,s=e[0].length,{norm:p,back:f}=Vt(e),c={};for(let m of a){let M=await l(m);try{let u=M.inputs?.[0]?.dims?.[2];u=typeof u=="number"&&u>0?u:t.segment??343980;let h=Math.floor(.75*u),b=[];for(let F=0;F<s;F+=h)b.push(F);let y=u>>1,_=F=>(F<y?F+1:u-F)/y,g=m.keep.map(F=>m.sources.indexOf(F)),w=await Ge(s,n,b,u,_,async(F,d)=>{let k=F-(u-d>>1),A=p.map(j=>{let R=new Float32Array(u),$=Math.max(0,k);return R.set(j.subarray($,Math.min(s,k+u)),$-k),R}),E=await ua(M,A,g,o,i),P=u-d>>1,S={};return m.keep.forEach((j,R)=>{S[j]=E[R].map($=>$.subarray(P,P+d))}),S},t.progress);for(let F in w)c[F]=w[F].map(f)}finally{M.free?.()}}return c}async function Nt(e,r,t,a,l,o,i,n){let s=r.length,p=r[0].length,f=(a>>1)+1,c=new Float32Array(2*s*f*n);r.forEach((h,b)=>{let y=new Float64Array(Math.max(p,(n-1)*l));y.set(h);let{re:_,im:g}=Be(y,a,l,o,!0),w=c.subarray(2*b*f*n),F=c.subarray((2*b+1)*f*n);for(let d=0,k=0;d<f;d++)for(let A=0,E=d;A<n;A++,E+=f,k++)w[k]=_[E]*i,F[k]=g[E]*i});let m=e.inputs?.[0]?.name??"mix_spec",M=ve(e,await e.run({[m]:he(c,[1,2*s,f,n],"float32")})).data,u=Ue(n,a,l,o);return t.map(h=>Array.from({length:s},(b,y)=>{let _=new Float64Array(n*f),g=new Float64Array(n*f),w=2*(h*s+y)*f*n;for(let d=0,k=w;d<f;d++)for(let A=0,E=d;A<n;A++,E+=f,k++)_[E]=M[k]/i,g[E]=M[k+f*n]/i;let F=new Float64Array((n-1)*l+a);return Ce(me(_,f),me(g,f),F,0,a,l,o),De(F,u,a,!0,p)}))}async function ca(e,r,t,a,l,o){let i=t.n??o?.n??4096,n=t.hop??o?.hop??1024,s=(t.window??o?.window)==="ones"?new Float64Array(i).fill(1):Ae(i),p=t.normalized??o?.normalized??!0?1/Math.sqrt(i):1,f=e.length,c=e[0].length,m=(t.pad??o?.pad)==="zero",{norm:M,scale:u}=t.standardize??o?.standardize??!0?Vt(e):{norm:e,scale:b=>b},h={};for(let b of a){let y=await l(b);try{let _=y.inputs?.[0]?.dims?.[3];_=typeof _=="number"&&_>0?_:t.frames??o?.frames;let g=t.segment??o?.segment??(_-1)*n,w=Math.max(1,Math.floor(g*(t.step??o?.step??.25))),F=g-w,d=F>0&&(m||c>2*F),k=d?M.map($=>Float32Array.from({length:c+2*F},(T,O)=>m?O<F||O>=F+c?0:$[O-F]:$[qe(O-F,c)])):M,A=k[0].length,E=Math.floor(g*(t.fade??o?.fade??.1)),P=[];for(let $=0;P.push($),!($+g>=A);$+=w);let S=b.keep.map($=>b.sources.indexOf($)),j=b.keep.map(()=>Array.from({length:f},()=>new Float64Array(A))),R=new Float64Array(A);for(let $=0;$<P.length;$++){let T=P[$],O=Math.min(g,A-T),L=!m&&O>g/2;t.progress?.({chunk:$+1,totalChunks:P.length});let q=k.map(W=>{let B=new Float32Array(g);for(let C=0;C<g;C++)B[C]=C<O?W[T+C]:L?W[T+qe(C,O)]:0;return B}),I=o?.mono?[]:await Nt(y,q,S,i,n,s,p,_);if(o?.mono)for(let W=0;W<f;W++)(await Nt(y,[q[W]],S,i,n,s,p,_)).forEach((B,C)=>(I[C]??(I[C]=[]))[W]=B[0]);for(let W=0;W<O;W++){let B=1;$>0&&W<E&&(B=W/(E-1)),$<P.length-1&&W>=g-E&&(B=Math.min(B,(g-1-W)/(E-1))),R[T+W]+=B;for(let C=0;C<S.length;C++)for(let H=0;H<f;H++)j[C][H][T+W]+=I[C][H][W]*B}}b.keep.forEach(($,T)=>{h[$]=j[T].map(O=>u(Float32Array.from({length:c},(L,q)=>R[q+(d?F:0)]>0?O[q+(d?F:0)]/R[q+(d?F:0)]:0)))})}finally{y.free?.()}}return h}async function pa(e,r,t,a,l,o){let i=t.windows??o?.windows,n=t.hop??o?.hop??256,s=e.length,p=e[0].length,f={};for(let c of a){let m=await l(c);try{let{starts:M,size:u,weight:h}=st(p,r,{...t,chunk:t.chunk??o?.chunk});Object.assign(f,await Ge(p,s,M,u,h,async(b,y)=>{let _=Object.fromEntries(c.keep.map(g=>[g,[]]));for(let g=0;g<s;g++){let w=e[g].subarray(b,b+y),F={},d=i.map((E,P)=>{let{re:S,im:j,T:R,bins:$}=Be(w,E,n,Ae(E),!0),T=new Float32Array($*R),O=1/Math.sqrt(E);for(let L=0,q=0;L<R;L++)for(let I=0;I<$;I++,q++)T[I*R+L]=Math.hypot(S[q],j[q])*O;return F[m.inputs?.[P]?.name??`mag_${E}`]=he(T,[1,$,R],"float32"),{re:Float32Array.from(S),im:Float32Array.from(j),T:R,F:$}}),k=await m.run(F),A=c.keep.map(()=>new Float64Array(y));d.forEach(({re:E,im:P,T:S,F:j},R)=>{let $=i[R],T=ve(m,k,R).data,O=new Float64Array(S*j),L=new Float64Array(S*j);c.keep.forEach((q,I)=>{let W=c.sources.indexOf(q)*j*S;for(let H=0;H<j;H++)for(let V=0,Q=H,te=W+H*S;V<S;V++,Q+=j,te++)O[Q]=E[Q]*T[te],L[Q]=P[Q]*T[te];let B=new Float64Array((S-1)*n+$);Ce(me(O,j),me(L,j),B,0,$,n,Ae($));let C=De(B,Ue(S,$,n,Ae($)),$,!0,y);for(let H=0;H<y;H++)A[I][H]+=C[H]})}),c.keep.forEach((E,P)=>_[E].push(A[P]))}return _},t.progress))}finally{m.free?.()}}return f}function ma(e,r){let t=(y,_,g)=>{let w=10**(y/40),F=2*Math.PI*g/r,d=Math.sin(F)/(2*_),k=Math.cos(F),A=2*Math.sqrt(w)*d;return[w*(w+1+(w-1)*k+A),-2*w*(w-1+(w+1)*k),w*(w+1+(w-1)*k-A),w+1-(w-1)*k+A,2*(w-1-(w+1)*k),w+1-(w-1)*k-A]},a=(y,_)=>{let g=2*Math.PI*_/r,w=Math.sin(g)/(2*y),F=Math.cos(g);return[(1+F)/2,-(1+F),(1+F)/2,1+w,-2*F,1-w]},l=[t(4,1/Math.sqrt(2),1500),a(.5,38)],o=e[0].length,i=.4,n=.25,p=(y=>{let _=Math.floor(y),g=y-_;return g>.5||g===.5&&_%2?_+1:_})((o/r-i)/(i*n))+1;if(!(p>0))return-1/0;let f=new Float64Array(p),c=[1,1,1,1.41,1.41];e.forEach((y,_)=>{let g=Float64Array.from(y);for(let[w,F,d,k,A,E]of l){w/=k,F/=k,d/=k,A/=k,E/=k;let P=0,S=0;for(let j=0;j<o;j++){let R=g[j],$=w*R+P;P=F*R-A*$+S,S=d*R-E*$,g[j]=$}}for(let w=0;w<p;w++){let F=Math.trunc(i*(w*n)*r),d=Math.min(o,Math.trunc(i*(w*n+1)*r)),k=0;for(let A=F;A<d;A++)k+=g[A]*g[A];f[w]+=(c[_]??1)*k/(i*r)}});let m=y=>-.691+10*Math.log10(y),M=y=>y.reduce((_,g)=>_+g,0)/y.length,u=[...f].filter(y=>m(y)>=-70);if(!u.length)return-1/0;let h=m(M(u))-10,b=[...f].filter(y=>m(y)>h&&m(y)>-70);return b.length?m(M(b)):-1/0}async function da(e,r,t,a,l){let o=e.length,i=e[0].length,{starts:n,size:s,weight:p}=st(i,r,t),f={};for(let c of a){let m=await l(c);try{let M=await Ge(i,o,n,s,p,async(u,h)=>{let b=new Float32Array(o*h);Jt(e,u,h).forEach((g,w)=>b.set(g,w*h));let y=ve(m,await m.run({[m.inputs?.[0]?.name??"input"]:he(b,[1,o,h],"float32")})).data,_={};for(let g of c.keep){let w=c.sources.indexOf(g);_[g]=Array.from({length:o},(F,d)=>y.subarray((w*o+d)*h,(w*o+d+1)*h))}return _},t.progress);Object.assign(f,M)}finally{m.free?.()}}return f}function ha(e,r){let t,a;if(Array.isArray(e))t=e,a=r.sampleRate;else if(e&&e.channelData)t=e.channelData,a=e.sampleRate??r.sampleRate;else throw new Error("neural-separate: audio must be Float32Array[] or { channelData, sampleRate }");if(!a)throw new Error("neural-separate: sampleRate is required (opts.sampleRate, or audio.sampleRate)");if(!t.length)throw new Error("neural-separate: audio has no channels");return{channelData:t,sampleRate:a}}function ga(e,r){if(e.length===r)return e;let t=new Float32Array(r);return t.set(e.subarray(0,Math.min(r,e.length))),t}async function it(e,r={}){if(r.dtype&&r.dtype!=="float32")throw new Error(`neural-separate: dtype '${r.dtype}' not supported: only 'float32' tensor marshalling is implemented`);let{channelData:t,sampleRate:a}=ha(e,r),{graphs:l,modelType:o,sampleRate:i,targets:n,preset:s}=await aa(r);t.length===1&&!s?.mono&&(t=[t[0],t[0]]);let p=()=>t.map(()=>new Float32Array(0));if(!t[0].length)return{stems:Object.fromEntries(n.map(g=>[g,p()])),sampleRate:a,residual:p()};let f=r.targetRate??i??a,c=f!==a?t.map(g=>Le(g,{from:a,to:f})):t,m=oa(r,s),M=s?.loudness==null?-1/0:ma(c,f),u=Number.isFinite(M)?10**((s.loudness-M)/20):1;u!==1&&(c=c.map(g=>g.map(w=>w*u)));let h=o==="hybrid"?await fa(c,f,r,l,m):o==="complex"?await ca(c,f,r,l,m,s):o==="multires"?await pa(c,f,r,l,m,s):o==="waveform"?await da(c,f,r,l,m):await ia(c,f,r,l,o,m),b=t[0].length,y={};for(let g of n)y[g]=h[g].map(w=>(u!==1&&(w=Float32Array.from(w,F=>F/u)),ga(f!==a?Le(w,{from:f,to:a}):w,b)));let _=t.map((g,w)=>{let F=Float32Array.from(g);for(let d of n){let k=y[d][w];for(let A=0;A<b;A++)F[A]-=k[A]}return F});return{stems:y,sampleRate:a,residual:_}}window.NEURALSEP={separate:it};})();
+
+/* ---------- Audio → notation (Basic Pitch) and instrument separation (SCNet) ---------- */
+const A2N = (() => {
+  const LIB = {
+    tf: 'lib/tf.min.js',
+    bpModel: ['lib/bp/model.json'],
+    ort: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.min.js',
+    ortWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+  };
+  let bp = null, sepReady = null;
+  async function loadBP(){
+    if (bp) return bp;
+    if (!window.tf) await loadScript(LIB.tf);
+    try{ await tf.setBackend('webgl'); }catch(e){ try{ await tf.setBackend('cpu'); }catch(_){} }
+    await tf.ready();
+    let model = null, err = null;
+    for (const u of LIB.bpModel){ try{ model = await tf.loadGraphModel(u); break; }catch(e){ err = e; } }
+    if (!model) throw err || new Error('model');
+    bp = new BASICPITCH.BasicPitch(Promise.resolve(model));
+    return bp;
+  }
+  async function loadSep(){
+    if (!sepReady) sepReady = (async () => { if (!window.ort) await loadScript(LIB.ort); ort.env.wasm.wasmPaths = LIB.ortWasm; return true; })();
+    return sepReady;
+  }
+  // decode once at 44.1 kHz stereo (for separation) — mono 22.05 kHz is made from it for transcription
+  async function decode(arrayBuf){
+    const oc = new OfflineAudioContext(2, 1, 44100);
+    return await oc.decodeAudioData(arrayBuf.slice(0));
+  }
+  function clip(buf, from, to){
+    const sr = buf.sampleRate, a = Math.max(0, Math.floor(from * sr)), b = Math.min(buf.length, Math.ceil(to * sr));
+    const ch = [0, 1].map(i => buf.getChannelData(Math.min(i, buf.numberOfChannels - 1)).slice(a, b));
+    return { ch, sr };
+  }
+  async function toMono22k(ch, sr){
+    const len = ch[0].length, oc = new OfflineAudioContext(1, Math.ceil(len / sr * 22050), 22050);
+    const b = oc.createBuffer(ch.length, len, sr); ch.forEach((c, i) => b.copyToChannel(c, i));
+    const s = oc.createBufferSource(); s.buffer = b; s.connect(oc.destination); s.start();
+    return (await oc.startRendering()).getChannelData(0);
+  }
+  async function transcribe(mono, onPct, opt = {}){
+    const m = await loadBP(), frames = [], onsets = [], contours = [];
+    await m.evaluateModel(mono, (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); }, p => onPct && onPct(p));
+    const { outputToNotesPoly, addPitchBendsToNoteEvents, noteFramesToTime } = BASICPITCH;
+    const ev = outputToNotesPoly(frames, onsets, opt.onset ?? .5, opt.frame ?? .3, opt.minLen ?? 8, true, opt.maxHz ?? null, opt.minHz ?? null, true);
+    return clean(noteFramesToTime(addPitchBendsToNoteEvents(contours, ev))
+      .map(n => ({ t: n.startTimeSeconds, d: n.durationSeconds, p: n.pitchMidi, a: n.amplitude }))
+      .filter(n => n.d > .04).sort((x, y) => x.t - y.t || x.p - y.p));
+  }
+  // drop overtone ghosts: a quieter note an octave, twelfth or two octaves above a note sounding with it
+  const OVER = new Set([12, 19, 24]);
+  function clean(notes){
+    const mx = notes.reduce((m, n) => Math.max(m, n.a), 0);
+    return notes.filter(n => {
+      if (n.a < mx * .18) return false;
+      for (const m of notes){
+        // a short false start just before a louder note of the same pitch
+        if (m !== n && m.p === n.p && n.d < .2 && m.t > n.t && m.t - n.t < .22 && m.a > n.a) return false;
+        if (m === n || !OVER.has(n.p - m.p)) continue;
+        const together = Math.abs(m.t - n.t) < .06 && n.d <= m.d + .12;    // starts with it, no longer than it: an overtone
+        if (n.a < m.a * (together ? .82 : .62) && m.t <= n.t + .12 && m.t + m.d >= n.t + Math.min(n.d, .1)) return false;
+      }
+      return true;
+    });
+  }
+  async function separate(ch, sr, onPct){
+    await loadSep();
+    const r = await NEURALSEP.separate(ch, { sampleRate: sr, model: 'scnet', wasmPaths: LIB.ortWasm, progress: p => onPct && onPct(typeof p === 'number' ? p : (p && (p.progress ?? (p.done / p.total))) || 0) });
+    return r.stems;                                   // { vocals, drums, bass, other }: [L, R]
+  }
+  /* ---- tempo: autocorrelation of the onset train, a mild preference near 110 BPM ---- */
+  function tempo(notes, dur){
+    if (notes.length < 4) return { bpm: 100, phase: 0 };
+    const R = 100, n = Math.ceil(dur * R) + 1, env = new Float32Array(n);
+    for (const x of notes){ const i = Math.round(x.t * R); for (let k = -2; k <= 2; k++){ const j = i + k; if (j >= 0 && j < n) env[j] += x.a * Math.exp(-k * k / 2); } }
+    let best = 0, bestBpm = 100;
+    for (let bpm = 50; bpm <= 200; bpm += .5){
+      const L = R * 60 / bpm; let s = 0;
+      for (const mul of [1, 2]){ const lag = L * mul, li = Math.floor(lag), fr = lag - li; for (let i = 0; i + li + 1 < n; i++) s += env[i] * (env[i + li] * (1 - fr) + env[i + li + 1] * fr) / mul; }
+      s *= Math.exp(-Math.pow(Math.log2(bpm / 110), 2) / (2 * .55 * .55));
+      if (s > best){ best = s; bestBpm = bpm; }
+    }
+    const T = 60 / bestBpm; let bp = 0, bestS = -1;
+    for (let k = 0; k < 24; k++){ const ph = k / 24 * T; let s = 0; for (const x of notes){ const r = ((x.t - ph) / T) % 1, dd = Math.min(r, 1 - r); s += x.a * Math.exp(-dd * dd / .005); } if (s > bestS){ bestS = s; bp = ph; } }
+    return { bpm: Math.round(bestBpm), phase: bp };
+  }
+  /* ---- key: Krumhansl–Kessler profiles on duration-weighted pitch classes ---- */
+  const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function key(notes){
+    const h = new Array(12).fill(0); notes.forEach(n => h[((n.p % 12) + 12) % 12] += n.d * (.5 + n.a));
+    const corr = (prof, r) => { const xs = h, ys = prof.map((_, i) => prof[(i - r + 12) % 12]); const mx = xs.reduce((a, b) => a + b) / 12, my = ys.reduce((a, b) => a + b) / 12; let s = 0, sx = 0, sy = 0; for (let i = 0; i < 12; i++){ s += (xs[i] - mx) * (ys[i] - my); sx += (xs[i] - mx) ** 2; sy += (ys[i] - my) ** 2; } return s / Math.sqrt(sx * sy || 1); };
+    let best = { r: 0, minor: false, c: -2 };
+    for (let r = 0; r < 12; r++){ const a = corr(MAJ, r), b = corr(MIN, r); if (a > best.c) best = { r, minor: false, c: a }; if (b > best.c) best = { r, minor: true, c: b }; }
+    return best;
+  }
+  const MAJ_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'], MIN_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
+  const SHARPS_ORDER = 'FCGDAEB', FLATS_ORDER = 'BEADGCF';
+  function keySig(k){                                // letter -> -1/0/1 and spelling preference
+    const majRoot = k.minor ? (k.r + 3) % 12 : k.r, n = { 0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 5: -1, 10: -2, 3: -3, 8: -4, 1: -5 }[majRoot];
+    const sig = { C: 0, D: 0, E: 0, F: 0, G: 0, A: 0, B: 0 };
+    if (n > 0) for (let i = 0; i < n; i++) sig[SHARPS_ORDER[i]] = 1; else for (let i = 0; i < -n; i++) sig[FLATS_ORDER[i]] = -1;
+    return { sig, flat: n < 0, name: (k.minor ? MIN_NAMES[k.r] + 'm' : MAJ_NAMES[k.r]) };
+  }
+  const SH = [['C', 0], ['C', 1], ['D', 0], ['D', 1], ['E', 0], ['F', 0], ['F', 1], ['G', 0], ['G', 1], ['A', 0], ['A', 1], ['B', 0]];
+  const FL = [['C', 0], ['D', -1], ['D', 0], ['E', -1], ['E', 0], ['F', 0], ['G', -1], ['G', 0], ['A', -1], ['A', 0], ['B', -1], ['B', 0]];
+  function spell(m, ks){
+    const pc = ((m % 12) + 12) % 12; let [l, acc] = (ks.flat ? FL : SH)[pc];
+    // prefer the key's own letter when the key signature covers it (e.g. F# in G, Bb in F)
+    for (const [L, A] of [[SH[pc][0], SH[pc][1]], [FL[pc][0], FL[pc][1]]]) if (ks.sig[L] === A && A !== 0){ l = L; acc = A; }
+    let oct = Math.floor(m / 12) - 1;
+    return { l, acc, oct };
+  }
+  function abcPitch({ l, oct }){ if (oct >= 5) return l.toLowerCase() + "'".repeat(oct - 5); return l + ','.repeat(Math.max(0, 4 - oct)); }
+  /* ---- quantize & shape into parts ---- */
+  function quantize(notes, g){
+    const out = [];
+    const sh = g.shift || 0;
+    for (const n of notes){ const s = Math.round((n.t - g.phase) / g.u); let e = Math.round((n.t + n.d - g.phase) / g.u); if (e <= s) e = s + 1; if (s >= 0) out.push({ s: s + sh, e: e + sh, p: n.p, a: n.a }); }
+    // one note per pitch per slot
+    const seen = new Set(); return out.filter(n => { const k = n.s + ':' + n.p; if (seen.has(k)) return false; seen.add(k); return true; });
+  }
+  // which beat is the downbeat: long, low, loud onsets (bass and chords) mark the start of a bar
+  function downbeat(notes, g, beats, sub){
+    const q = quantize(notes, { ...g, shift: 0 }), barLen = beats * sub, sc = new Array(beats).fill(0);
+    for (const n of q){ if (n.s % sub) continue; const w = n.a * Math.min(4, (n.e - n.s) / sub) * (n.p < 55 ? 2 : 1); sc[(n.s / sub) % beats] += w; }
+    let k = 0; for (let i = 1; i < beats; i++) if (sc[i] > sc[k] * 1.08) k = i;
+    return (barLen - k * sub) % barLen;               // slots to shift so beat k lands on a bar line
+  }
+  function mono(ns, pick){                           // monophonic line: per onset the highest (or lowest) note, cut at the next onset
+    const by = new Map(); ns.forEach(n => { const c = by.get(n.s); if (!c || (pick === 'low' ? n.p < c.p : n.p > c.p)) by.set(n.s, n); });
+    const line = [...by.values()].sort((a, b) => a.s - b.s);
+    // drop notes buried under a longer note of the line (ornament noise)
+    for (let i = 0; i < line.length - 1; i++) line[i] = { ...line[i], e: Math.min(line[i].e, line[i + 1].s) };
+    return line.filter(n => n.e > n.s);
+  }
+  function chords(ns, maxVoices = 4){                // keep up to N strongest notes sounding together
+    return ns.slice().sort((a, b) => a.s - b.s || b.a - a.a).filter((n, i, arr) => arr.filter(x => x.s === n.s).indexOf(n) < maxVoices);
+  }
+  function split(notes, mode){
+    if (mode === 'piano'){
+      return [{ name: 'Right hand', prog: 0, clef: 'treble', notes: chords(notes.filter(n => n.p >= 60), 4) },
+              { name: 'Left hand', prog: 0, clef: 'bass', notes: chords(notes.filter(n => n.p < 60), 3) }];
+    }
+    const melody = mono(notes.filter(n => n.p >= 57), 'high');
+    const mset = new Set(melody.map(n => n.s + ':' + n.p));
+    const bass = mono(notes.filter(n => n.p < 52), 'low');
+    const bset = new Set(bass.map(n => n.s + ':' + n.p));
+    const harm = chords(notes.filter(n => !mset.has(n.s + ':' + n.p) && !bset.has(n.s + ':' + n.p) && n.p >= 45 && n.p < 84), 3);
+    return [{ name: 'Melody', prog: 73, clef: 'treble', notes: melody }, { name: 'Harmony', prog: 0, clef: 'auto', notes: harm }, { name: 'Bass', prog: 32, clef: 'bass', notes: bass }];
+  }
+  /* ---- one part → ABC bars (slots of L = 1/(4·sub)) ---- */
+  function partAbc(notes, total, barLen, sub, ks){
+    // events: a change of the sounding set or a new onset starts an event
+    const act = Array.from({ length: total }, () => new Set()), ons = Array.from({ length: total }, () => new Set());
+    for (const n of notes) for (let s = n.s; s < Math.min(n.e, total); s++){ act[s].add(n.p); if (s === n.s) ons[s].add(n.p); }
+    const evs = [];
+    for (let s = 0; s < total; s++){
+      const set = [...act[s]].sort((a, b) => a - b), prev = evs[evs.length - 1];
+      const same = prev && prev.p.length === set.length && prev.p.every((x, i) => x === set[i]) && !ons[s].size && (s % barLen) !== 0;
+      if (same) prev.len++;
+      else evs.push({ s, len: 1, p: set, cont: set.filter(x => !ons[s].has(x)) });
+    }
+    // a note continuing into the next event is tied from this one
+    for (let i = 0; i < evs.length - 1; i++) evs[i].tie = new Set(evs[i + 1].cont.filter(x => evs[i].p.includes(x)));
+    const LENS = sub === 4 ? [16, 12, 8, 6, 4, 3, 2, 1] : [8, 6, 4, 3, 2, 1];
+    const bars = []; let cur = [], barStart = 0, state = {};
+    const flush = () => { bars.push(cur.join(' ') || 'z' + barLen); cur = []; state = {}; };
+    const noteTok = (m, tie) => {
+      const sp = spell(m, ks), k = sp.l + sp.oct, want = sp.acc, have = state[k] ?? ks.sig[sp.l];
+      let acc = ''; if (want !== have){ acc = want === 1 ? '^' : want === -1 ? '_' : '='; state[k] = want; }
+      return { t: acc + abcPitch(sp), tie };
+    };
+    for (const ev of evs){
+      let pos = ev.s, left = ev.len;
+      while (left > 0){
+        const inBar = barLen - ((pos - barStart) % barLen); let take = Math.min(left, inBar);
+        // largest written value that fits
+        let piece = LENS.find(v => v <= take) || 1;
+        const more = left - piece > 0;
+        const lenStr = piece === 1 ? '' : String(piece);
+        if (!ev.p.length) cur.push('z' + lenStr);
+        else {
+          const toks = ev.p.map(m => noteTok(m, more || (left - piece === 0 && ev.tie && ev.tie.has(m))));
+          cur.push(toks.length > 1 ? '[' + toks.map(x => x.t + (x.tie ? '-' : '')).join('') + ']' + lenStr : toks[0].t + lenStr + (toks[0].tie ? '-' : ''));
+        }
+        pos += piece; left -= piece;
+        if ((pos - barStart) % barLen === 0 && pos > barStart){ flush(); barStart = pos; }
+      }
+    }
+    if (cur.length){ const used = (pos => pos)(0); flush(); }
+    return bars;
+  }
+  function build(parts, o){
+    const sub = o.sub, barLen = o.beats * sub, ks = keySig(o.key);
+    const allNotes = parts.flatMap(p => p.notes), total0 = allNotes.reduce((m, n) => Math.max(m, n.e), 0);
+    const total = Math.ceil(total0 / barLen) * barLen || barLen;
+    const used = parts.filter(p => p.notes.length);
+    const L = sub === 4 ? '1/16' : '1/8';
+    const head = ['X:1', 'T:' + (o.title || 'Audio'), 'C:แปลงจากไฟล์เสียง', 'M:' + o.beats + '/4', 'L:' + L, 'Q:1/4=' + o.bpm, 'K:' + ks.name];
+    const bodies = used.map(p => {
+      const med = p.notes.map(n => n.p).sort((a, b) => a - b)[p.notes.length >> 1] || 60;
+      const clef = p.clef === 'auto' ? (med < 57 ? 'bass' : 'treble') : p.clef;
+      return { p, clef, bars: partAbc(p.notes, total, barLen, sub, ks) };
+    });
+    if (used.length > 1) head.push('%%score ' + (o.mode === 'piano' ? '{' + used.map((_, i) => i + 1).join(' ') + '}' : used.map((_, i) => '(' + (i + 1) + ')').join(' ')));
+    used.length > 1 ? bodies.forEach((b, i) => head.push('V:' + (i + 1) + ' clef=' + b.clef + ' name="' + b.p.name + '"', '%%MIDI program ' + b.p.prog))
+                    : head.push('%%MIDI program ' + bodies[0].p.prog);
+    const per = 4, nb = Math.max(...bodies.map(b => b.bars.length)); let body = '';
+    for (let r = 0; r < nb; r += per){
+      bodies.forEach((b, i) => {
+        const seg = b.bars.slice(r, r + per); if (!seg.length) return;
+        const last = r + per >= nb;
+        body += (used.length > 1 ? '[V:' + (i + 1) + '] ' : (b.clef === 'bass' && r === 0 ? '' : '')) + seg.join(' | ') + (last ? ' |]' : ' |') + '\n';
+      });
+    }
+    if (used.length === 1 && bodies[0].clef === 'bass') head[head.length - 2] = head[head.length - 2] + ' clef=bass';
+    return head.join('\n') + '\n' + body.trim();
+  }
+  /* ---- WAV encoding for the separated stems ---- */
+  function wav(ch, sr){
+    const n = ch[0].length, C = ch.length, buf = new ArrayBuffer(44 + n * C * 2), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * C * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, C, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * C * 2, true); v.setUint16(32, C * 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * C * 2, true);
+    let o = 44; for (let i = 0; i < n; i++) for (let c = 0; c < C; c++){ v.setInt16(o, Math.max(-1, Math.min(1, ch[c][i])) * 32767, true); o += 2; }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+  return { LIB, decode, clip, toMono22k, transcribe, separate, tempo, key, keySig, quantize, downbeat, split, mono, chords, build, wav };
+})();
+
+/* audio panel */
+const AU = { file: null, buf: null, stems: null, stemSr: 44100, busy: false, stop: false, url: '' };
+const STEM_NAMES = { vocals: 'เสียงร้อง (Vocals)', bass: 'เบส (Bass)', other: 'เครื่องดนตรีอื่น (Other)', drums: 'กลอง (Drums)' };
+const isAudio = f => f && ((f.type || '').startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|oga|flac|aiff?|webm)$/i.test(f.name || ''));
+function auStatus(msg, cls, pct){
+  const st = $('#auStatus'); st.className = 'status' + (cls ? ' ' + cls : ''); st.textContent = msg;
+  $('#auBarW').hidden = pct == null; if (pct != null) $('#auBar').style.width = Math.round(pct * 100) + '%';
+}
+async function openAudio(f){
+  AU.file = f; AU.stems = null; $('#auStems').hidden = true; $('#auStems').textContent = '';
+  $('#audioPanel').hidden = false; $('#auName').textContent = f.name;
+  if (AU.url) URL.revokeObjectURL(AU.url); AU.url = URL.createObjectURL(f); $('#auPlayer').src = AU.url;
+  auStatus('กำลังเปิดไฟล์เสียง…', '', 0);
+  try{
+    AU.buf = await A2N.decode(await f.arrayBuffer());
+    const d = AU.buf.duration; $('#auTo').max = Math.ceil(d); $('#auFrom').max = Math.floor(d);
+    $('#auFrom').value = 0; $('#auTo').value = Math.min(Math.ceil(d), IOS || /Android/i.test(navigator.userAgent) ? 30 : 90);
+    auStatus('ความยาว ' + fmtTime(d) + ' · เลือกช่วงเวลาและวิธีแยก แล้วกด "แปลงเป็นโน้ต"', 'ok');
+  }catch(e){ AU.buf = null; auStatus('เปิดไฟล์เสียงนี้ไม่ได้ ลองไฟล์ .mp3 .wav หรือ .m4a', 'err'); }
+  $('#audioPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+$('#pickAudio').addEventListener('change', e => { const f = e.target.files[0]; if (f) openAudio(f); e.target.value = ''; });
+function auRange(){
+  const d = AU.buf.duration, a = Math.max(0, Math.min(d - .5, +$('#auFrom').value || 0)), b = Math.max(a + .5, Math.min(d, +$('#auTo').value || d));
+  return [a, b];
+}
+function stemRows(){
+  const box = $('#auStems'); box.textContent = ''; box.hidden = false;
+  for (const k of ['vocals', 'other', 'bass', 'drums']){
+    const ch = AU.stems[k]; if (!ch) continue;
+    const row = document.createElement('div'); row.className = 'au-stem';
+    const b = document.createElement('b'); b.textContent = STEM_NAMES[k];
+    const au = document.createElement('audio'); au.controls = true; au.preload = 'none';
+    const blob = A2N.wav(ch, AU.stemSr); au.src = URL.createObjectURL(blob);
+    const dl = document.createElement('button'); dl.type = 'button'; dl.textContent = '⬇ WAV'; dl.title = 'ดาวน์โหลดไฟล์เสียงแนวนี้';
+    dl.onclick = () => save(baseName0(AU.file.name) + '-' + k + '.wav', blob);
+    const lab = document.createElement('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.dataset.stem = k; cb.checked = k !== 'drums'; cb.disabled = k === 'drums';
+    lab.append(cb, k === 'drums' ? 'กลองไม่มีระดับเสียง' : 'ใส่ในโน้ต');
+    row.append(b, au, dl, lab); box.append(row);
+  }
+}
+const baseName0 = n => (n || 'audio').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60);
+async function auRun(notate){
+  if (!AU.buf || AU.busy) return;
+  AU.busy = true; AU.stop = false; $('#auGo').disabled = $('#auStemsOnly').disabled = true; $('#auStop').hidden = false;
+  const mode = notate ? $('#auMode').value : 'stems', [a, b] = auRange(), sub = +$('#auGrid').value, beats = +$('#auMeter').value;
+  const halt = () => { if (AU.stop) throw new Error('stopped'); };
+  try{
+    const { ch, sr } = A2N.clip(AU.buf, a, b);
+    let parts, allNotes = [];
+    const tx = async (chs, label, from, span, opt) => {
+      auStatus('กำลังฟังและถอดโน้ต' + (label ? ' ' + label : '') + '…', '', from);
+      const mono = await A2N.toMono22k(chs, sr); halt();
+      const notes = await A2N.transcribe(mono, p => auStatus('กำลังฟังและถอดโน้ต' + (label ? ' ' + label : '') + ' ' + Math.round(p * 100) + '%', '', from + p * span), opt);
+      halt(); return notes;
+    };
+    if (mode === 'stems'){
+      if (!AU.stems || AU.stemsRange !== a + '-' + b){
+        auStatus('กำลังโหลดโมเดลแยกเครื่องดนตรี (ครั้งแรกประมาณ 13 MB)…', '', 0);
+        AU.stems = await A2N.separate(ch, sr, p => auStatus('กำลังแยกเครื่องดนตรีด้วย AI ' + Math.round(p * 100) + '%', '', p * (notate ? .6 : 1)));
+        AU.stemSr = sr; AU.stemsRange = a + '-' + b; halt();
+        stemRows();
+      }
+      if (!notate){ auStatus('แยกเสียงเสร็จแล้ว ฟังหรือดาวน์โหลดแต่ละแนวได้ด้านล่าง · กด "แปลงเป็นโน้ต" เพื่อเขียนโน้ตจากแต่ละแนว', 'ok'); return; }
+      const want = [...document.querySelectorAll('#auStems input[data-stem]')].filter(x => x.checked).map(x => x.dataset.stem);
+      const plan = { vocals: { name: 'Vocals', prog: 53, clef: 'treble', kind: 'high' }, other: { name: 'Instruments', prog: 0, clef: 'auto', kind: 'chords' }, bass: { name: 'Bass', prog: 32, clef: 'bass', kind: 'low', opt: { maxHz: 400 } } };
+      const keys = ['vocals', 'other', 'bass'].filter(k => want.includes(k));
+      if (!keys.length) throw new Error('nostem');
+      const raw = {};
+      for (let i = 0; i < keys.length; i++){ const k = keys[i]; raw[k] = await tx(AU.stems[k], STEM_NAMES[k], .6 + .35 * i / keys.length, .35 / keys.length, plan[k].opt); allNotes.push(...raw[k]); }
+      parts = keys.map(k => ({ ...plan[k], raw: raw[k] }));
+    } else {
+      const notes = await tx(ch, '', 0, .9); allNotes = notes;
+      parts = [{ raw: notes, all: true }];
+    }
+    if (!allNotes.length) throw new Error('nonotes');
+    const tm = A2N.tempo(allNotes, b - a), bpm = +$('#auBpm').value || tm.bpm;
+    const phase = $('#auBpm').value ? (A2N.tempo(allNotes, b - a), tm.phase) : tm.phase;
+    let ph = phase; const first = allNotes.reduce((m, n) => Math.min(m, n.t), Infinity); const T = 60 / bpm; while (ph > first + .02) ph -= T;
+    const g = { u: T / sub, phase: ph };
+    g.shift = A2N.downbeat(allNotes, g, beats, sub);
+    { const first = A2N.quantize(allNotes, g).reduce((m, n) => Math.min(m, n.s), Infinity), bl = beats * sub; if (first >= bl) g.shift -= Math.floor(first / bl) * bl; }
+    let shaped;
+    if (mode === 'stems') shaped = parts.map(p => { const q = A2N.quantize(p.raw, g); return { name: p.name, prog: p.prog, clef: p.clef, notes: p.kind === 'high' ? A2N.mono(q, 'high') : p.kind === 'low' ? A2N.mono(q, 'low') : A2N.chords(q, 3) }; });
+    else shaped = A2N.split(A2N.quantize(parts[0].raw, g), mode);
+    const k = A2N.key(allNotes);
+    const abc = A2N.build(shaped, { sub, beats, bpm, key: k, title: baseName0(AU.file.name), mode });
+    stopPlay(); tsel.value = '0';
+    applyAbc(abc, 'แปลงจากไฟล์เสียง');
+    const nParts = shaped.filter(p => p.notes.length).length, nNotes = shaped.reduce((s, p) => s + p.notes.length, 0);
+    auStatus('เขียนโน้ตแล้ว ' + nParts + ' แนว ' + nNotes + ' ตัว · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
+    setTimeout(() => paper.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 300);
+  }catch(e){
+    const m = String(e && e.message || e);
+    if (m === 'stopped') auStatus('หยุดแล้ว', '');
+    else if (m === 'nonotes') auStatus('ไม่พบโน้ตที่ชัดพอในช่วงนี้ ลองช่วงเวลาอื่น หรือไฟล์ที่เสียงดนตรีชัดกว่า', 'err');
+    else if (m === 'nostem') auStatus('เลือกอย่างน้อย 1 แนวที่จะใส่ในโน้ต', 'err');
+    else if (mode === 'stems') auStatus('แยกเครื่องดนตรีไม่สำเร็จ (' + m.slice(0, 120) + ') · ต้องต่ออินเทอร์เน็ตตอนโหลดโมเดลครั้งแรก และหน่วยความจำต้องพอ ลองช่วงเวลาสั้นลง หรือเปิดจากเว็บ GitHub / แอปที่ติดตั้งบนคอมพิวเตอร์', 'err');
+    else auStatus('แปลงไม่สำเร็จ (' + m.slice(0, 120) + ') · ต้องต่ออินเทอร์เน็ตตอนใช้ครั้งแรก', 'err');
+  }finally{
+    AU.busy = false; $('#auGo').disabled = $('#auStemsOnly').disabled = false; $('#auStop').hidden = true; $('#auBarW').hidden = true;
+  }
+}
+$('#auGo').addEventListener('click', () => auRun(true));
+$('#auStemsOnly').addEventListener('click', () => auRun(false));
+$('#auStop').addEventListener('click', () => { AU.stop = true; auStatus('กำลังหยุด…', ''); });
 
 /* ---------- Mix console: per-voice fader, pan, reverb/delay sends, mute, solo + FX returns + master ---------- */
 const MIX_DEF = () => ({ master: 80, tracks: {}, fx: { rev: { size: 'hall', ret: 80 }, dly: { time: '8', fb: 35, ret: 70 } } });
@@ -2081,6 +2680,7 @@ async function addFiles(list){
   let over = false;
   for (const f of arr){
     if (isPdf(f)){ await openPdf(f); continue; }
+    if (isAudio(f)){ openAudio(f); continue; }
     if (f && f.type && f.type.startsWith('image/')){ if (files.length < MAXP) files.push({ file:f, rot:0 }); else over = true; }
   }
   if (over) toast('อ่านได้สูงสุด ' + MAXP + ' หน้าต่อครั้ง');
