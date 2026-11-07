@@ -204,6 +204,17 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .ntype button small{font-weight:400;font-size:.72rem;opacity:.85}
 .ntype button[aria-pressed=true]{background:var(--grad);color:var(--accent-ink);box-shadow:0 6px 16px -10px var(--glow)}
 .scan.src-audio :is(#nType,#passBox,#apiBox,#hint-field,#optsWrap,#thaiPanel,#scanStatus,#steps,#prepWrap){display:none!important}
+.cap-src{display:flex;flex-wrap:wrap;gap:6px}
+.cap-src button{gap:6px;border-radius:99px}
+.cap-src button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
+.cap-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#capStart.on{background:#DC2626!important;background-image:none!important;color:#fff;box-shadow:0 0 0 4px rgba(220,38,38,.18)!important}
+.cap-time{font:600 1.1rem var(--mono);font-variant-numeric:tabular-nums;min-width:3.2em}
+.cappanel.nometer .cap-level{background:none;flex:0 0 auto;min-width:0;width:14px;height:14px;border-radius:50%;background:#DC2626;animation:recdot 1s ease-in-out infinite}
+.cappanel.nometer .cap-level i{display:none}
+@keyframes recdot{50%{opacity:.25}}
+.cap-level{flex:1 1 120px;height:8px;border-radius:99px;background:var(--line);overflow:hidden;min-width:80px}
+.cap-level i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22C55E,#FACC15 70%,#EF4444);transition:width .08s}
 .aupanel audio{width:100%;height:40px}
 .au-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
 .ai-item{display:grid;gap:2px;align-content:start;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));min-width:0}
@@ -560,6 +571,7 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
   <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></symbol>
   <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol>
   <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
@@ -617,10 +629,11 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
 
       <div class="drop" id="drop">
         <div class="drop-ico"><svg class="i"><use href="#i-scan"/></svg></div>
-        <div><strong>ถ่ายรูป หรือเลือกไฟล์</strong><p id="dropHint">รูปโน้ต · PDF · ไฟล์เสียงเพลง (mp3 wav m4a) · ลากมาวางหรือกด Ctrl+V ก็ได้</p></div>
+        <div><strong>ถ่ายรูป หรือเลือกไฟล์</strong><p id="dropHint">รูปโน้ต · PDF · ไฟล์เสียงเพลง (mp3 wav m4a) · หรืออัดเสียงเพลงที่เปิดอยู่ · ลากมาวางหรือกด Ctrl+V ก็ได้</p></div>
         <div class="row">
           <label class="btn primary"><svg class="i"><use href="#i-camera"/></svg>ถ่ายรูป<input id="cam" type="file" accept="image/*" capture="environment"></label>
           <label class="btn"><svg class="i"><use href="#i-image"/></svg>เลือกไฟล์<input id="pick" type="file" accept="image/*,application/pdf,.pdf,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff" multiple></label>
+          <button class="btn" id="capOpen" type="button"><svg class="i"><use href="#i-mic"/></svg>อัดเสียง</button>
           <input id="pickAudio" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff" hidden>
         </div>
       </div>
@@ -641,6 +654,21 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
         <span class="ntype-l">ชนิดโน้ต</span>
         <button type="button" data-type="staff" aria-pressed="true">โน้ตสากล <small>บรรทัดห้าเส้น</small></button>
         <button type="button" data-type="thai" aria-pressed="false">โน้ตไทย <small>ด ร ม ฟ ซ ล ท</small></button>
+      </div>
+      <div class="thaipanel cappanel" id="capPanel" hidden>
+        <div class="thai-h"><b>อัดเสียงแล้วแปลงเป็นโน้ต</b><span>เปิดเพลงหรือเล่นดนตรี แล้วกดเริ่มอัด อัดได้ครั้งละไม่เกิน 3 นาที เสร็จแล้วแอปวิเคราะห์ BPM คีย์ และแปลงเป็นทำนองพร้อมชื่อคอร์ดได้ทันที</span></div>
+        <div class="cap-src" role="group" aria-label="แหล่งเสียง">
+          <button type="button" data-cap="mic" aria-pressed="true"><svg class="i"><use href="#i-mic"/></svg>ไมค์</button>
+          <button type="button" data-cap="tab" aria-pressed="false" id="capTabBtn"><svg class="i"><use href="#i-volume"/></svg>เสียงจากแท็บ / หน้าจอ</button>
+        </div>
+        <p class="note" id="capHow"></p>
+        <div class="cap-row">
+          <button class="primary" id="capStart" type="button">● เริ่มอัด</button>
+          <span class="cap-time" id="capTime">0:00</span>
+          <span class="cap-level" aria-hidden="true"><i id="capLevel"></i></span>
+          <button class="ghost" id="capClose" type="button">ปิด</button>
+        </div>
+        <div class="status" id="capStatus" aria-live="polite"></div>
       </div>
       <div class="thaipanel aupanel" id="audioPanel" hidden>
         <div class="thai-h"><b>ไฟล์เสียง → โน้ตเพลง</b><span id="auName">แยกเป็นโน้ตทีละแนว หรือแยกเสียงเครื่องดนตรีออกเป็นไฟล์</span></div>
@@ -1943,6 +1971,79 @@ const SONG = (() => {
   }
   return { analyze };
 })();
+
+/* record audio: microphone, or (on a computer) the sound of a browser tab the user shares */
+const CAP = { src: 'mic', rec: null, stream: null, t0: 0, timer: 0, ctx: null, MAX: 180 };
+const canTab = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !IOS && !/Android/i.test(navigator.userAgent);
+function capHow(){
+  $('#capHow').textContent = CAP.src === 'mic'
+    ? 'วางเครื่องใกล้ลำโพงหรือเครื่องดนตรี ในห้องที่เงียบ แล้วเปิดเพลง · ครั้งแรกเบราว์เซอร์จะขออนุญาตใช้ไมค์'
+    : 'Chrome หรือ Edge บนคอมพิวเตอร์: กดเริ่มอัด เลือกแท็บที่เปิดเพลงไว้ แล้วติ๊ก "แชร์เสียงในแท็บ" (Share tab audio) จากนั้นเล่นเพลงในแท็บนั้น · ใช้กับเพลงที่คุณมีสิทธิ์ใช้';
+  document.querySelectorAll('[data-cap]').forEach(b => b.setAttribute('aria-pressed', b.dataset.cap === CAP.src ? 'true' : 'false'));
+}
+$('#capTabBtn').hidden = !canTab;
+document.querySelectorAll('[data-cap]').forEach(b => b.addEventListener('click', () => { if (CAP.rec) return; CAP.src = b.dataset.cap; capHow(); }));
+$('#capOpen').addEventListener('click', () => { $('#capPanel').hidden = false; capHow(); $('#capStatus').textContent = ''; $('#capPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+$('#capClose').addEventListener('click', () => { if (CAP.rec) capStop(); $('#capPanel').hidden = true; });
+function capMsg(t, cls){ const st = $('#capStatus'); st.className = 'status' + (cls ? ' ' + cls : ''); st.textContent = t; }
+async function capStart(){
+  if (!navigator.mediaDevices || !window.MediaRecorder){ capMsg('เบราว์เซอร์นี้อัดเสียงไม่ได้ · อัดด้วยแอปอัดเสียงของเครื่องแล้วใช้ "เลือกไฟล์" แทน', 'err'); return; }
+  let stream;
+  try{
+    if (CAP.src === 'mic') stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    else {
+      const d = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, suppressLocalAudioPlayback: false }, preferCurrentTab: false, selfBrowserSurface: 'exclude', systemAudio: 'include' });
+      const at = d.getAudioTracks();
+      if (!at.length){ d.getTracks().forEach(t => t.stop()); capMsg('ไม่ได้เสียงมาด้วย · ตอนเลือกแท็บให้ติ๊ก "แชร์เสียงในแท็บ" (Share tab audio) แล้วลองใหม่', 'err'); return; }
+      d.getVideoTracks().forEach(t => t.stop());
+      stream = new MediaStream(at);
+    }
+  }catch(e){
+    const name = e && e.name;
+    capMsg(name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตให้ใช้' + (CAP.src === 'mic' ? 'ไมค์' : 'เสียงจากแท็บ') + ' · ถ้าเปิดในแอปบน Claude ให้เปิดเวอร์ชัน GitHub หรือแอปที่ติดตั้งไว้แทน หรืออัดด้วยแอปอัดเสียงแล้วใช้ "เลือกไฟล์"' : 'เริ่มอัดไม่ได้ (' + (name || e) + ')', 'err');
+    return;
+  }
+  CAP.stream = stream;
+  const chunks = [], mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 192000 } : undefined); CAP.rec = rec;
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    clearInterval(CAP.timer); stream.getTracks().forEach(t => t.stop()); try{ CAP.ctx && CAP.ctx.close(); }catch(e){}
+    CAP.rec = null; $('#capStart').classList.remove('on'); $('#capStart').textContent = '● เริ่มอัด'; $('#capLevel').style.width = '0';
+    const secs = (performance.now() - CAP.t0) / 1000;
+    if (!chunks.length || secs < 2){ capMsg('อัดสั้นเกินไป ลองอัดอย่างน้อย 5 วินาที', 'err'); return; }
+    const type = chunks[0].type || mime || 'audio/webm', ext = /mp4/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+    const d = new Date(), name = 'อัดเสียง-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + '.' + ext;
+    const file = new File([new Blob(chunks, { type })], name, { type });
+    capMsg('อัดแล้ว ' + fmtTime(secs) + ' · กำลังเปิดในช่องไฟล์เสียง…', 'ok');
+    $('#capPanel').hidden = true;
+    await openAudio(file);
+  };
+  stream.getTracks().forEach(t => t.addEventListener('ended', () => { if (CAP.rec && CAP.rec.state === 'recording') CAP.rec.stop(); }));
+  rec.start(1000); CAP.t0 = performance.now();
+  CAP.level = () => 0;
+  CAP.peak = 0; $('#capPanel').classList.remove('nometer');
+  (async () => {                                     // level meter
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext, c = new AC(); CAP.ctx = c;
+      const an = c.createAnalyser(), g = c.createGain(); g.gain.value = 0;
+      c.createMediaStreamSource(stream).connect(an).connect(g).connect(c.destination);
+      await c.resume();
+      const buf = new Float32Array(an.fftSize);
+      CAP.level = () => { an.getFloatTimeDomainData(buf); let pk = 0; for (let i = 0; i < buf.length; i++){ const v = Math.abs(buf[i]); if (v > pk) pk = v; } return pk; };
+    }catch(e){}
+  })();
+  $('#capStart').classList.add('on'); $('#capStart').textContent = '■ หยุดอัด';
+  capMsg(CAP.src === 'mic' ? 'กำลังอัดจากไมค์… เปิดเพลงได้เลย' : 'กำลังอัดเสียงจากแท็บ… เล่นเพลงในแท็บนั้นได้เลย', '');
+  CAP.timer = setInterval(() => {
+    const t = (performance.now() - CAP.t0) / 1000; $('#capTime').textContent = fmtTime(t);
+    const lv = CAP.level(); CAP.peak = Math.max(CAP.peak, lv); $('#capLevel').style.width = Math.min(100, Math.round(Math.sqrt(lv) * 110)) + '%';
+    if (t > 3 && CAP.peak === 0) $('#capPanel').classList.add('nometer');   // no level readout here: show a recording dot instead
+    if (t >= CAP.MAX) capStop();
+  }, 100);
+}
+function capStop(){ if (CAP.rec && CAP.rec.state === 'recording') CAP.rec.stop(); }
+$('#capStart').addEventListener('click', () => CAP.rec ? capStop() : capStart());
 
 /* audio panel */
 const AU = { file: null, buf: null, stems: null, stemSr: 44100, busy: false, stop: false, url: '' };
