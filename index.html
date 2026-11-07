@@ -215,6 +215,9 @@ details.adv>summary .meta{color:var(--ink-2);font-weight:400;font-size:.8rem}
 .ai-alt button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
 .au-info.busy b{opacity:.35}
 .au-range{display:flex;align-items:center;gap:6px}
+.au-parts{display:flex;flex-wrap:wrap;gap:6px}
+.au-parts span{display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 12px;border-radius:99px;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));font-weight:600;font-size:.86rem;color:var(--ink)}
+.au-parts small{font-weight:400;color:var(--ink-2)}
 .au-range input{width:6em}
 .au-stems{display:grid;gap:8px}
 .au-stem{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
@@ -649,13 +652,10 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
           <div class="ai-item"><span>ความยาว</span><b id="aiBars">–</b><small id="aiLen"></small></div>
         </div>
         <div class="thai-opts">
-          <label class="field">วิธีแยก
-            <select id="auMode">
-              <option value="pitch">แยกตามระดับเสียง: ทำนอง · เสียงประสาน · เบส (เร็ว)</option>
-              <option value="stems">แยกเครื่องดนตรีด้วย AI: เสียงร้อง · เบส · เครื่องอื่น (ช้ากว่า)</option>
-              <option value="piano">ไม่แยก: เป็นโน้ตเปียโน 2 มือ</option>
-            </select>
-          </label>
+          <div class="field">แยกเป็น
+            <div class="au-parts"><span>🎵 เดี่ยว <small>(Melody)</small></span><span>🎹 คอร์ด <small>(Chords + ชื่อคอร์ด)</small></span></div>
+            <input type="hidden" id="auMode" value="lead">
+          </div>
           <label class="field">ช่วงเวลา (วินาที)
             <span class="au-range"><input type="number" id="auFrom" min="0" value="0" step="1" inputmode="decimal" aria-label="เริ่มที่วินาที"> ถึง <input type="number" id="auTo" min="1" value="60" step="1" inputmode="decimal" aria-label="ถึงวินาที"></span>
           </label>
@@ -996,7 +996,7 @@ function buildEvents(){
   events = []; trackInfo = [];
   if (!visual) return;
   try{
-    const a = visual.setUpAudio({ midiTranspose:+tsel.value });
+    const a = visual.setUpAudio({ midiTranspose:+tsel.value, chordsOff: /^%ss-gchord\s+off/m.test(ta.value) });
     a.tracks.forEach((tr, i) => {
       let prog = null;
       tr.forEach(ev => { if (ev.cmd==='note' && ev.pitch!=null){ ev.track = i; if (prog===null) prog = ev.instrument||0; events.push(ev); } });
@@ -1729,10 +1729,18 @@ const A2N = (() => {
   function chords(ns, maxVoices = 4){                // keep up to N strongest notes sounding together
     return ns.slice().sort((a, b) => a.s - b.s || b.a - a.a).filter((n, i, arr) => arr.filter(x => x.s === n.s).indexOf(n) < maxVoices);
   }
-  function split(notes, mode){
+  function split(notes, mode, sub){
+    split.sub = sub || 2;
     if (mode === 'piano'){
       return [{ name: 'Right hand', prog: 0, clef: 'treble', notes: chords(notes.filter(n => n.p >= 60), 4) },
               { name: 'Left hand', prog: 0, clef: 'bass', notes: chords(notes.filter(n => n.p < 60), 3) }];
+    }
+    if (mode === 'lead'){
+      const melody = mono(notes.filter(n => n.p >= 57), 'high'), ms = new Set(melody.map(n => n.s + ':' + n.p));
+      // a short low "note" is usually a kick drum, not bass: keep low notes that last at least a beat
+      const drumLike = n => n.p < 48 && (n.e - n.s) < (split.sub || 2);
+      const acc = chords(notes.filter(n => !ms.has(n.s + ':' + n.p) && n.p >= 33 && n.p < 84 && !drumLike(n)), 4);
+      return [{ name: 'Melody', prog: 0, clef: 'treble', notes: melody, lead: true }, { name: 'Chords', prog: 0, clef: 'auto', notes: acc, chordPart: true }];
     }
     const melody = mono(notes.filter(n => n.p >= 57), 'high');
     const mset = new Set(melody.map(n => n.s + ':' + n.p));
@@ -1741,15 +1749,41 @@ const A2N = (() => {
     const harm = chords(notes.filter(n => !mset.has(n.s + ':' + n.p) && !bset.has(n.s + ':' + n.p) && n.p >= 45 && n.p < 84), 3);
     return [{ name: 'Melody', prog: 73, clef: 'treble', notes: melody }, { name: 'Harmony', prog: 0, clef: 'auto', notes: harm }, { name: 'Bass', prog: 32, clef: 'bass', notes: bass }];
   }
+  /* ---- chord names from the chord part (and a little of the melody), per half bar (4/4) or bar ---- */
+  const CH = [['', [0, 4, 7]], ['m', [0, 3, 7]], ['7', [0, 4, 7, 10]], ['maj7', [0, 4, 7, 11]], ['m7', [0, 3, 7, 10]], ['dim', [0, 3, 6]], ['sus4', [0, 5, 7]]];
+  function chordNames(acc, mel, total, barLen, beats, sub, ks){
+    const win = beats === 4 ? barLen / 2 : barLen, out = new Map(); let last = '';
+    for (let w0 = 0; w0 < total; w0 += win){
+      const w = new Array(12).fill(0), bw = new Array(12).fill(0); let tot = 0;
+      const add = (n, k) => { const ov = Math.min(n.e, w0 + win) - Math.max(n.s, w0); if (ov <= 0 || (n.p < 48 && n.e - n.s < sub)) return; const v = ov * k * (.5 + n.a), pc = ((n.p % 12) + 12) % 12; w[pc] += v; tot += v; if (k === 1 && n.p < 55) bw[pc] += ov * (n.e - n.s); };
+      acc.forEach(n => add(n, 1)); mel.forEach(n => add(n, .35));
+      // the bass note: the low pitch that sounds longest here (short low hits are usually drums)
+      let low = null; { let bm = 0; bw.forEach((v, pc) => { if (v > bm){ bm = v; low = pc; } }); }
+      if (tot < win * .4) continue;
+      let best = null;
+      for (let r = 0; r < 12; r++) for (const [q, iv] of CH){
+        const set = new Set(iv.map(i => (r + i) % 12)); let sc = 0;
+        for (let pc = 0; pc < 12; pc++) sc += set.has(pc) ? w[pc] * (pc === r ? 1.3 : 1) : -.7 * w[pc];
+        if (!w[(r + iv[1]) % 12] || !w[r]) sc -= tot * .5;          // need the root and the third (or 4th)
+        if (iv.length > 3) sc -= tot * .12; if (q === 'dim' || q === 'sus4') sc -= tot * .1;
+        if (low !== null && low === r) sc += tot * .25;
+        if (!best || sc > best.sc) best = { r, q, sc };
+      }
+      if (!best || best.sc <= 0) continue;
+      const sp = spell(best.r + 60, ks), name = sp.l + (sp.acc === 1 ? '#' : sp.acc === -1 ? 'b' : '') + best.q;
+      if (name !== last){ out.set(w0, name); last = name; }
+    }
+    return out;
+  }
   /* ---- one part → ABC bars (slots of L = 1/(4·sub)) ---- */
-  function partAbc(notes, total, barLen, sub, ks){
+  function partAbc(notes, total, barLen, sub, ks, syms){
     // events: a change of the sounding set or a new onset starts an event
     const act = Array.from({ length: total }, () => new Set()), ons = Array.from({ length: total }, () => new Set());
     for (const n of notes) for (let s = n.s; s < Math.min(n.e, total); s++){ act[s].add(n.p); if (s === n.s) ons[s].add(n.p); }
     const evs = [];
     for (let s = 0; s < total; s++){
       const set = [...act[s]].sort((a, b) => a - b), prev = evs[evs.length - 1];
-      const same = prev && prev.p.length === set.length && prev.p.every((x, i) => x === set[i]) && !ons[s].size && (s % barLen) !== 0;
+      const same = prev && prev.p.length === set.length && prev.p.every((x, i) => x === set[i]) && !ons[s].size && (s % barLen) !== 0 && !(syms && syms.has(s));
       if (same) prev.len++;
       else evs.push({ s, len: 1, p: set, cont: set.filter(x => !ons[s].has(x)) });
     }
@@ -1765,6 +1799,7 @@ const A2N = (() => {
     };
     for (const ev of evs){
       let pos = ev.s, left = ev.len;
+      if (syms && syms.has(ev.s)) cur.push('"' + syms.get(ev.s) + '"');
       while (left > 0){
         const inBar = barLen - ((pos - barStart) % barLen); let take = Math.min(left, inBar);
         // largest written value that fits
@@ -1790,11 +1825,15 @@ const A2N = (() => {
     const used = parts.filter(p => p.notes.length);
     const L = sub === 4 ? '1/16' : '1/8';
     const head = ['X:1', 'T:' + (o.title || 'Audio'), 'C:แปลงจากไฟล์เสียง', 'M:' + o.beats + '/4', 'L:' + L, 'Q:1/4=' + o.bpm, 'K:' + ks.name];
+    const accP = parts.find(p => p.chordPart), leadP = used.find(p => p.lead);
+    const syms = accP && leadP ? chordNames(accP.notes, leadP.notes, total, barLen, o.beats, sub, ks) : null;
+    if (syms && syms.size) head.splice(1, 0, '%ss-gchord off');   // chord names are shown; the Chords part plays them
     const bodies = used.map(p => {
       const med = p.notes.map(n => n.p).sort((a, b) => a - b)[p.notes.length >> 1] || 60;
-      const clef = p.clef === 'auto' ? (med < 57 ? 'bass' : 'treble') : p.clef;
-      return { p, clef, bars: partAbc(p.notes, total, barLen, sub, ks) };
+      const clef = p.clef === 'auto' ? (med < (p.chordPart ? 62 : 57) ? 'bass' : 'treble') : p.clef;
+      return { p, clef, bars: partAbc(p.notes, total, barLen, sub, ks, p.lead ? syms : null) };
     });
+    o.chordCount = syms ? syms.size : 0;
     if (used.length > 1) head.push('%%score ' + (o.mode === 'piano' ? '{' + used.map((_, i) => i + 1).join(' ') + '}' : used.map((_, i) => '(' + (i + 1) + ')').join(' ')));
     used.length > 1 ? bodies.forEach((b, i) => head.push('V:' + (i + 1) + ' clef=' + b.clef + ' name="' + b.p.name + '"', '%%MIDI program ' + b.p.prog))
                     : head.push('%%MIDI program ' + bodies[0].p.prog);
@@ -2032,14 +2071,14 @@ async function auRun(notate){
       const bassP = shaped.find(p => p.kind === 'low'), voc = shaped.find(p => p.kind === 'high');
       if (bassP && voc) voc.notes = voc.notes.filter(n => n.p >= 52 || !hit(n, [bassP]));
     }
-    else shaped = A2N.split(A2N.quantize(parts[0].raw, g), mode);
+    else shaped = A2N.split(A2N.quantize(parts[0].raw, g), mode, sub);
     const k = AU.song && AU.song.keyConf > .02 ? AU.song.key : A2N.key(allNotes);
-    const abc = A2N.build(shaped, { sub, beats, bpm, key: k, title: baseName0(AU.file.name), mode });
+    const bo = { sub, beats, bpm, key: k, title: baseName0(AU.file.name), mode }, abc = A2N.build(shaped, bo);
     stopPlay(); tsel.value = '0';
     applyAbc(abc, 'แปลงจากไฟล์เสียง');
     const nParts = shaped.filter(p => p.notes.length).length, nNotes = shaped.reduce((s, p) => s + p.notes.length, 0);
     const skip = mode === 'stems' && AU.skipped && AU.skipped.length ? ' · ไม่ได้ใส่ ' + AU.skipped.join(', ') + ' เพราะแทบไม่มีเสียง' : '';
-    auStatus('เขียนโน้ตแล้ว ' + nParts + ' แนว ' + nNotes + ' ตัว' + skip + ' · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
+    auStatus('เขียนโน้ตแล้ว ' + (mode === 'lead' ? 'แนวเดี่ยวและคอร์ด' + (bo.chordCount ? ' พร้อมชื่อคอร์ด ' + bo.chordCount + ' จุด' : '') : nParts + ' แนว') + ' · ' + nNotes + ' ตัวโน้ต' + skip + ' · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
     setTimeout(() => paper.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 300);
   }catch(e){
     const m = String(e && e.message || e);
@@ -2247,7 +2286,7 @@ function normalizeVoices(abc){
 const STRIP_COLORS = ['#A78BFA', '#22D3EE', '#F472B6', '#FBBF24', '#34D399', '#FB923C', '#60A5FA', '#E879F9'];
 function drawMixer(){
   const box = $('#mixer'); if (!box) return;
-  const ids = voiceIds(), sig = JSON.stringify(trackInfo) + '|' + ids.join(',');
+  const ids = voiceIds(), sig = JSON.stringify(trackInfo) + '|' + ids.map(id => id + '=' + voiceName(id)).join(',');
   if (box.dataset.sig !== sig){
     box.dataset.sig = sig; box.textContent = ''; mixCtl.length = 0;
     const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -2346,7 +2385,7 @@ function drawVoiceRows(){
   drawThaiBand();
   drawMixer();
   const box = $('#voices'), ids = voiceIds();
-  const sig = JSON.stringify(trackInfo) + '|' + MY_INST.map(x => myName(x.key) + (THAI_SND.user[x.key] || []).length).join(',');
+  const sig = JSON.stringify(trackInfo) + '|' + ids.map(id => id + '=' + voiceName(id)).join(',') + '|' + MY_INST.map(x => myName(x.key) + (THAI_SND.user[x.key] || []).length).join(',');
   if (box.dataset.sig === sig){ drawRecUse(); return; }
   box.dataset.sig = sig; box.textContent = '';
   setTimeout(drawRecUse);
@@ -3371,7 +3410,7 @@ $('#dlSvg').onclick = () => {
 $('#dlMidi').onclick = () => {
   if (!visual){ toast('ยังไม่มีโน้ต'); return; }
   try{
-    const mid = ABCJS.synth.getMidiFile(visual, { midiOutputType:'binary', midiTranspose:+tsel.value, qpm:+$('#tempo').value });
+    const mid = ABCJS.synth.getMidiFile(visual, { midiOutputType:'binary', midiTranspose:+tsel.value, qpm:+$('#tempo').value, chordsOff: /^%ss-gchord\s+off/m.test(ta.value) });
     const bytes = mid instanceof Uint8Array ? mid : (Array.isArray(mid) ? mid[0] : new Uint8Array(mid));
     const name = baseName();
     save(name+'-midi.zip', zip([{name:name+'.mid', data:bytes},{name:name+'.abc', data:new TextEncoder().encode(ta.value)}]));
@@ -3794,7 +3833,7 @@ async function exportFor(app){
     const xml = musicXmlNow(), name = baseName(), enc = new TextEncoder();
     const entries = [{ name: name + '.musicxml', data: enc.encode(xml) }];
     try{
-      const mid = ABCJS.synth.getMidiFile(visual, { midiOutputType:'binary', midiTranspose: viewSt() });
+      const mid = ABCJS.synth.getMidiFile(visual, { midiOutputType:'binary', midiTranspose: viewSt(), chordsOff: /^%ss-gchord\s+off/m.test(ta.value) });
       entries.push({ name: name + '.mid', data: mid instanceof Uint8Array ? mid : (Array.isArray(mid) ? mid[0] : new Uint8Array(mid)) });
     }catch(e){}
     const how = {
