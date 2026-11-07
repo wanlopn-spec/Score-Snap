@@ -1873,11 +1873,19 @@ async function auRun(notate){
       if (!notate){ auStatus('แยกเสียงเสร็จแล้ว ฟังหรือดาวน์โหลดแต่ละแนวได้ด้านล่าง · กด "แปลงเป็นโน้ต" เพื่อเขียนโน้ตจากแต่ละแนว', 'ok'); return; }
       const want = [...document.querySelectorAll('#auStems input[data-stem]')].filter(x => x.checked).map(x => x.dataset.stem);
       const plan = { vocals: { name: 'Vocals', prog: 53, clef: 'treble', kind: 'high' }, other: { name: 'Instruments', prog: 0, clef: 'auto', kind: 'chords' }, bass: { name: 'Bass', prog: 32, clef: 'bass', kind: 'low', opt: { maxHz: 400 } } };
-      const keys = ['vocals', 'other', 'bass'].filter(k => want.includes(k));
+      // leave out a part that is nearly silent (only bleed from the others)
+      const rms = k => { const c = AU.stems[k][0]; let s2 = 0; for (let i = 0; i < c.length; i += 4) s2 += c[i] * c[i]; return Math.sqrt(s2 / (c.length / 4)); };
+      const lv = Object.fromEntries(['vocals', 'other', 'bass'].map(k => [k, rms(k)])), top = Math.max(lv.vocals, lv.other, lv.bass);
+      const quiet = ['vocals', 'other', 'bass'].filter(k => want.includes(k) && lv[k] < top * .22);
+      const keys = ['vocals', 'other', 'bass'].filter(k => want.includes(k) && !quiet.includes(k));
+      AU.skipped = quiet.map(k => STEM_NAMES[k]);
       if (!keys.length) throw new Error('nostem');
       const raw = {};
       for (let i = 0; i < keys.length; i++){ const k = keys[i]; raw[k] = await tx(AU.stems[k], STEM_NAMES[k], .6 + .35 * i / keys.length, .35 / keys.length, plan[k].opt); allNotes.push(...raw[k]); }
-      parts = keys.map(k => ({ ...plan[k], raw: raw[k] }));
+      // inside one part, drop notes much weaker than the part's typical note (bleed from other instruments)
+      const gate = ns => { if (ns.length < 4) return ns; const a = ns.map(n => n.a).sort((x, y) => x - y), med = a[a.length >> 1]; return ns.filter(n => n.a >= med * .5); };
+      parts = keys.map(k => ({ ...plan[k], raw: gate(raw[k]) }));
+      allNotes = parts.flatMap(p => p.raw);
     } else {
       const notes = await tx(ch, '', 0, .9); allNotes = notes;
       parts = [{ raw: notes, all: true }];
@@ -1897,7 +1905,8 @@ async function auRun(notate){
     stopPlay(); tsel.value = '0';
     applyAbc(abc, 'แปลงจากไฟล์เสียง');
     const nParts = shaped.filter(p => p.notes.length).length, nNotes = shaped.reduce((s, p) => s + p.notes.length, 0);
-    auStatus('เขียนโน้ตแล้ว ' + nParts + ' แนว ' + nNotes + ' ตัว · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
+    const skip = mode === 'stems' && AU.skipped && AU.skipped.length ? ' · ไม่ได้ใส่ ' + AU.skipped.join(', ') + ' เพราะแทบไม่มีเสียง' : '';
+    auStatus('เขียนโน้ตแล้ว ' + nParts + ' แนว ' + nNotes + ' ตัว' + skip + ' · ♩=' + bpm + ' · คีย์ ' + A2N.keySig(k).name + ' · ลองกดเล่นเทียบกับเสียงจริง ถ้าจังหวะเพี้ยนให้ใส่ BPM เองแล้วแปลงใหม่', 'ok');
     setTimeout(() => paper.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 300);
   }catch(e){
     const m = String(e && e.message || e);
