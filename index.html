@@ -1119,7 +1119,7 @@ function makeCtx(){
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints > 1);
 function audio(){
   // iOS: play through the media channel so the silent switch doesn't mute it.
-  try{ if (navigator.audioSession && navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){}
+  try{ if (navigator.audioSession && !window.__capOn && navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){}
   if (!makeCtx()){ toast('เบราว์เซอร์นี้ไม่รองรับการเล่นเสียง'); return null; }
   if (ctx.state!=='running'){ try{ ctx.resume(); }catch(e){} }
   // Unlock: a silent buffer started inside the tap gesture (needed on iOS/Safari).
@@ -1645,8 +1645,15 @@ const A2N = (() => {
   }
   // decode once at 44.1 kHz stereo (for separation) — mono 22.05 kHz is made from it for transcription
   async function decode(arrayBuf){
-    const oc = new OfflineAudioContext(2, 1, 44100);
-    return await oc.decodeAudioData(arrayBuf.slice(0));
+    const tries = [() => new OfflineAudioContext(2, 1, 44100), () => makeCtx()];
+    let err;
+    for (const mk of tries){
+      try{
+        const c = mk(); if (!c) continue;
+        return await new Promise((res, rej) => { const p = c.decodeAudioData(arrayBuf.slice(0), res, rej); if (p && p.then) p.then(res, rej); });
+      }catch(e){ err = e; }
+    }
+    throw err || new Error('decode');
   }
   function clip(buf, from, to){
     const sr = buf.sampleRate, a = Math.max(0, Math.floor(from * sr)), b = Math.min(buf.length, Math.ceil(to * sr));
@@ -1983,14 +1990,33 @@ function capHow(){
 }
 $('#capTabBtn').hidden = !canTab;
 document.querySelectorAll('[data-cap]').forEach(b => b.addEventListener('click', () => { if (CAP.rec) return; CAP.src = b.dataset.cap; capHow(); }));
-$('#capOpen').addEventListener('click', () => { $('#capPanel').hidden = false; capHow(); $('#capStatus').textContent = ''; $('#capPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+$('#capOpen').addEventListener('click', () => {
+  $('#capPanel').hidden = false; capHow(); $('#capStatus').textContent = '';
+  if (!capAllowed('mic') && !capAllowed('tab')) capMsg('แอปบน Claude ไม่อนุญาตให้ใช้ไมค์หรืออัดเสียงจากแท็บ · กดลิงก์นี้เพื่อเปิดเวอร์ชันเว็บแล้วอัดเสียงได้ หรืออัดด้วยแอปอัดเสียงของเครื่องแล้วใช้ "เลือกไฟล์"', 'err', true);
+  $('#capPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
 $('#capClose').addEventListener('click', () => { if (CAP.rec) capStop(); $('#capPanel').hidden = true; });
-function capMsg(t, cls){ const st = $('#capStatus'); st.className = 'status' + (cls ? ' ' + cls : ''); st.textContent = t; }
+const WEB_APP = 'https://wanlopn-spec.github.io/Score-Snap/';
+function capMsg(t, cls, link){
+  const st = $('#capStatus'); st.className = 'status' + (cls ? ' ' + cls : ''); st.textContent = t;
+  if (link && !location.href.startsWith(WEB_APP)){ const a = document.createElement('a'); a.href = WEB_APP; a.target = '_blank'; a.rel = 'noopener'; a.textContent = ' เปิด Score Snap เวอร์ชันเว็บ ↗'; st.append(a); }
+}
+// a page inside another site (e.g. Claude) may not be allowed to use the microphone at all
+function capAllowed(kind){
+  try{ const pp = document.permissionsPolicy || document.featurePolicy; if (pp && pp.allowsFeature) return pp.allowsFeature(kind === 'mic' ? 'microphone' : 'display-capture'); }catch(e){}
+  return true;
+}
+const SAFARI = IOS || (/Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent));
 async function capStart(){
-  if (!navigator.mediaDevices || !window.MediaRecorder){ capMsg('เบราว์เซอร์นี้อัดเสียงไม่ได้ · อัดด้วยแอปอัดเสียงของเครื่องแล้วใช้ "เลือกไฟล์" แทน', 'err'); return; }
+  if (!window.isSecureContext || !navigator.mediaDevices || !window.MediaRecorder){ capMsg('เบราว์เซอร์นี้อัดเสียงไม่ได้ · อัดด้วยแอปอัดเสียงของเครื่อง (เช่น Voice Memos) แล้วใช้ "เลือกไฟล์" แทน', 'err', true); return; }
+  if (!capAllowed(CAP.src)){ capMsg((CAP.src === 'mic' ? 'หน้านี้ไม่ได้รับอนุญาตให้ใช้ไมค์' : 'หน้านี้ไม่ได้รับอนุญาตให้อัดเสียงจากแท็บ') + ' (ข้อจำกัดของแอปบน Claude) · ใช้เวอร์ชันเว็บแทน หรืออัดด้วยแอปอัดเสียงแล้วใช้ "เลือกไฟล์"', 'err', true); return; }
   let stream;
+  try{ if (navigator.audioSession){ window.__capOn = true; navigator.audioSession.type = 'play-and-record'; } }catch(e){}
   try{
-    if (CAP.src === 'mic') stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if (CAP.src === 'mic'){
+      try{ stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+      catch(e){ if (e && (e.name === 'OverconstrainedError' || e.name === 'TypeError')) stream = await navigator.mediaDevices.getUserMedia({ audio: true }); else throw e; }
+    }
     else {
       const d = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, suppressLocalAudioPlayback: false }, preferCurrentTab: false, selfBrowserSurface: 'exclude', systemAudio: 'include' });
       const at = d.getAudioTracks();
@@ -1999,16 +2025,22 @@ async function capStart(){
       stream = new MediaStream(at);
     }
   }catch(e){
-    const name = e && e.name;
-    capMsg(name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตให้ใช้' + (CAP.src === 'mic' ? 'ไมค์' : 'เสียงจากแท็บ') + ' · ถ้าเปิดในแอปบน Claude ให้เปิดเวอร์ชัน GitHub หรือแอปที่ติดตั้งไว้แทน หรืออัดด้วยแอปอัดเสียงแล้วใช้ "เลือกไฟล์"' : 'เริ่มอัดไม่ได้ (' + (name || e) + ')', 'err');
+    window.__capOn = false; try{ if (navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(_){}
+    const name = e && e.name, what = CAP.src === 'mic' ? 'ไมค์' : 'เสียงจากแท็บ';
+    const msg = name === 'NotAllowedError' || name === 'SecurityError' ? 'ไม่ได้รับอนุญาตให้ใช้' + what + ' · กดอนุญาตเมื่อเบราว์เซอร์ถาม หรือเปิดสิทธิ์ไมค์ในการตั้งค่าเบราว์เซอร์ (iPad: การตั้งค่า › Safari › ไมโครโฟน) · ถ้าเปิดในแอปบน Claude ให้ใช้เวอร์ชันเว็บแทน'
+      : name === 'NotFoundError' ? 'ไม่พบไมค์ในเครื่องนี้' : name === 'NotReadableError' ? 'ไมค์ถูกแอปอื่นใช้อยู่ ปิดแอปนั้นแล้วลองใหม่' : name === 'AbortError' && CAP.src === 'tab' ? 'ยกเลิกการเลือกแท็บแล้ว' : 'เริ่มอัดไม่ได้ (' + (name || e) + ')';
+    capMsg(msg, 'err', name === 'NotAllowedError' || name === 'SecurityError');
     return;
   }
   CAP.stream = stream;
-  const chunks = [], mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
-  const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 192000 } : undefined); CAP.rec = rec;
+  // Safari decodes its own MP4/AAC recordings reliably, other browsers WebM/Opus
+  const chunks = [], mime = (SAFARI ? ['audio/mp4', 'audio/aac', 'audio/webm'] : ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4']).find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+  let rec; try{ rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 192000 } : undefined); }catch(e){ rec = new MediaRecorder(stream); }
+  CAP.rec = rec;
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   rec.onstop = async () => {
     clearInterval(CAP.timer); stream.getTracks().forEach(t => t.stop()); try{ CAP.ctx && CAP.ctx.close(); }catch(e){}
+    window.__capOn = false; try{ if (navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}
     CAP.rec = null; $('#capStart').classList.remove('on'); $('#capStart').textContent = '● เริ่มอัด'; $('#capLevel').style.width = '0';
     const secs = (performance.now() - CAP.t0) / 1000;
     if (!chunks.length || secs < 2){ capMsg('อัดสั้นเกินไป ลองอัดอย่างน้อย 5 วินาที', 'err'); return; }
@@ -2020,6 +2052,7 @@ async function capStart(){
     await openAudio(file);
   };
   stream.getTracks().forEach(t => t.addEventListener('ended', () => { if (CAP.rec && CAP.rec.state === 'recording') CAP.rec.stop(); }));
+  rec.onerror = ev => capMsg('การอัดหยุดกลางคัน (' + ((ev.error && ev.error.name) || 'error') + ')', 'err');
   rec.start(1000); CAP.t0 = performance.now();
   CAP.level = () => 0;
   CAP.peak = 0; $('#capPanel').classList.remove('nometer');
