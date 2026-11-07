@@ -1947,6 +1947,7 @@ const SONG = (() => {
 /* audio panel */
 const AU = { file: null, buf: null, stems: null, stemSr: 44100, busy: false, stop: false, url: '' };
 const STEM_NAMES = { vocals: 'เสียงร้อง (Vocals)', bass: 'เบส (Bass)', other: 'เครื่องดนตรีอื่น (Other)', drums: 'กลอง (Drums)' };
+const AUDIO_ACCEPT = 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.aif,.aiff,.webm';
 const isAudio = f => f && ((f.type || '').startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|oga|flac|aiff?|webm)$/i.test(f.name || ''));
 function auStatus(msg, cls, pct){
   const st = $('#auStatus'); st.className = 'status' + (cls ? ' ' + cls : ''); st.textContent = msg;
@@ -4842,7 +4843,7 @@ setScan('เลือกรูปโน้ต PDF หรือไฟล์เส
   if (!sample){ setScan('ยังไม่ได้ลงชื่อเข้าใช้ Claude: ฟังเสียง เปลี่ยนเครื่องดนตรี แก้โน้ต และนำเข้า MusicXML ได้ · ถ้าต้องการให้ AI อ่านรูปและบันทึกไฟล์ กด Sign in มุมขวาบน (สมัครฟรีได้)'); setGo(); return; }
   caps = await sample.limits().catch(()=>null);
   if (!caps || !caps.images){ setScan('มุมมองนี้ส่งรูปให้ Claude ไม่ได้ · ยังแก้ไขและฟังโน้ตได้'); sample=null; }
-  else if (caps.images.mediaTypes) { $('#pick').accept = caps.images.mediaTypes.join(',') + ',application/pdf,.pdf'; }
+  else if (caps.images.mediaTypes) { $('#pick').accept = caps.images.mediaTypes.join(',') + ',application/pdf,.pdf,' + AUDIO_ACCEPT; }
   drawThumbs();
 })();
 })();
