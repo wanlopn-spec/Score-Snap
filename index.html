@@ -453,6 +453,20 @@ code{font-family:var(--mono);font-size:.9em}
 .bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--grad);border-radius:inherit}
 .pctl{display:flex;align-items:center;gap:8px}
+.speed{position:relative;display:flex;align-items:center;gap:4px}
+.speed .sm{width:32px;height:32px;font-size:1.1rem;font-weight:600}
+.sp-val{min-height:32px;padding:0 10px;border-radius:99px;font:600 .8rem var(--mono);font-variant-numeric:tabular-nums;min-width:4.6em}
+.sp-val.slow{background:var(--accent-soft);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.sp-val.fast{background:color-mix(in srgb,var(--amber) 16%,var(--surface));color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.sp-menu{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:10px;min-width:210px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow),0 12px 30px -10px rgba(30,10,60,.35);z-index:30}
+.sp-menu[hidden]{display:none}
+.sp-menu .sp-h{grid-column:1/-1;font-size:.72rem;color:var(--ink-2);margin-bottom:2px}
+.sp-menu button{min-height:36px;padding:0;font:600 .8rem var(--mono)}
+.sp-menu button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:transparent}
+html[data-skin="royal"] .player .sp-val{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:var(--on-deep)}
+html[data-skin="royal"] .player .sp-val.slow{background:rgba(196,181,253,.25);color:#fff}
+html[data-skin="royal"] .player .sp-val.fast{background:rgba(252,211,77,.2);color:#FCD34D}
 .tempo{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--ink-2)}
 .tempo output{font:500 .8rem var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;min-width:3.6em}
 input[type=range]{accent-color:var(--accent);width:110px}
@@ -464,7 +478,15 @@ input[type=range]{accent-color:var(--accent);width:110px}
 @media (max-width:700px){
   .player-in{grid-template-columns:auto auto minmax(0,1fr)}
   .pctl{grid-column:1/-1;justify-content:space-between}
+  .sp-menu{left:0;transform:none}
   input[type=range]{width:min(160px,38vw)}
+  .pctl{gap:6px}
+  .pctl #tempo{width:min(120px,22vw)}
+  .pctl .tempo{gap:4px}
+  .pctl .tempo output{min-width:2em}
+}
+@media (max-width:370px){
+  .pctl .tempo output{display:none}
   body{padding-block-end:calc(170px + env(safe-area-inset-bottom,0px))}
 }
 .toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);
@@ -823,6 +845,15 @@ kbd{font:500 .74rem var(--mono);border:1px solid var(--line);border-bottom-width
       <div class="seek" id="pSeek" title="แตะเพื่อเลื่อนไปตำแหน่งนั้น"><div class="bar"><i id="pBar"></i></div></div>
     </div>
     <div class="pctl">
+      <div class="speed" role="group" aria-label="ความเร็วเพลง">
+        <button type="button" class="round sm" id="spDown" aria-label="ช้าลง 10%" title="ช้าลง">−</button>
+        <button type="button" class="sp-val" id="spVal" aria-haspopup="true" aria-expanded="false" aria-controls="spMenu" title="เลือกความเร็วเพลง">100%</button>
+        <button type="button" class="round sm" id="spUp" aria-label="เร็วขึ้น 10%" title="เร็วขึ้น">+</button>
+        <div class="sp-menu" id="spMenu" hidden>
+          <span class="sp-h">ความเร็วเพลง (เทียบกับต้นฉบับ)</span>
+          <button type="button" data-sp="50">50%</button><button type="button" data-sp="60">60%</button><button type="button" data-sp="70">70%</button><button type="button" data-sp="75">75%</button><button type="button" data-sp="80">80%</button><button type="button" data-sp="90">90%</button><button type="button" data-sp="100">100%</button><button type="button" data-sp="110">110%</button><button type="button" data-sp="125">125%</button>
+        </div>
+      </div>
       <label class="tempo">♩ <input type="range" id="tempo" min="30" max="240" value="100" aria-label="ความเร็ว"><output id="tempoOut">♩=100</output></label>
       <label class="toggle" title="วนซ้ำ"><input type="checkbox" id="loop" aria-label="วนซ้ำ"><span><svg class="i"><use href="#i-repeat"/></svg></span></label>
       <button class="round" id="testSnd" title="ทดสอบเสียง" aria-label="ทดสอบเสียง"><svg class="i"><use href="#i-volume"/></svg></button>
@@ -918,8 +949,32 @@ function defaultQpm(){
     return Math.max(30, Math.min(240, 240000/msWhole));
   }catch(e){ return 100; }
 }
-function showTempo(){ $('#tempoOut').textContent = $('#tempo').value; if (!$('#play').dataset.on && typeof showCue === 'function') showCue(); }
+function speedPct(){ const b = defaultQpm(); return b ? Math.round(+$('#tempo').value / b * 100) : 100; }
+function setSpeed(pct){
+  const b = defaultQpm(), q = Math.max(+$('#tempo').min, Math.min(+$('#tempo').max, Math.round(b * pct / 100)));
+  $('#tempo').value = q; render.userTempo = true; showTempo(); restartAtTempo();
+}
+// re-start playback from where it is so a new speed takes effect at once
+function restartAtTempo(){
+  if (!$('#play').dataset.on) return;
+  const w = nowWhole(); play(w, loopBar ? loopBar.b : null);
+}
+function showTempo(){ $('#tempoOut').textContent = $('#tempo').value;
+  { const p = speedPct(), v = $('#spVal'); if (v){ v.textContent = p + '%'; v.classList.toggle('slow', p < 98); v.classList.toggle('fast', p > 102); v.title = 'ความเร็ว ' + p + '% (♩=' + $('#tempo').value + ')'; document.querySelectorAll('#spMenu [data-sp]').forEach(x => x.setAttribute('aria-pressed', Math.abs(+x.dataset.sp - p) < 2 ? 'true' : 'false')); } } if (!$('#play').dataset.on && typeof showCue === 'function') showCue(); }
 $('#tempo').addEventListener('input', ()=>{ render.userTempo = true; showTempo(); });
+$('#tempo').addEventListener('change', restartAtTempo);
+{
+  const STEPS = [25, 40, 50, 60, 70, 75, 80, 90, 100, 110, 125, 150, 175, 200];
+  const step = dir => { const p = speedPct(); const n = dir < 0 ? [...STEPS].reverse().find(x => x < p - 1) : STEPS.find(x => x > p + 1); if (n) setSpeed(n); };
+  $('#spDown').addEventListener('click', () => step(-1));
+  $('#spUp').addEventListener('click', () => step(1));
+  const menu = $('#spMenu'), val = $('#spVal');
+  const open = o => { menu.hidden = !o; val.setAttribute('aria-expanded', o ? 'true' : 'false'); };
+  val.addEventListener('click', e => { e.stopPropagation(); open(menu.hidden); });
+  menu.addEventListener('click', e => { const b = e.target.closest('[data-sp]'); if (b){ setSpeed(+b.dataset.sp); open(false); } e.stopPropagation(); });
+  document.addEventListener('click', () => open(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden){ open(false); val.focus(); } });
+}
 tsel.addEventListener('change', () => { render(); if (typeof drawChords === 'function') drawChords(); });
 ta.addEventListener('input', ()=>{ clearTimeout(renderTimer); sel=null; updateSelLabel(); renderTimer=setTimeout(()=>{ render.userTempo=false; render(); },350); if(isExample) setBadge('แก้ไขแล้ว', false); });
 
